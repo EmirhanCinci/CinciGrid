@@ -26,6 +26,22 @@ export default class CinciGrid {
         }
 
         /**
+         * Tablo HTML elementini temsil eder.  
+         * `render()` çağrıldığında dinamik olarak oluşturulur ve DOM’a eklenir.
+         *
+         * @type {jQuery|null}
+         * @default null
+         * @description
+         * Bu özellik tabloya ait `<table>` elementinin jQuery nesnesini saklar.  
+         * Geliştirici tablo oluşturulduktan sonra doğrudan erişim veya özelleştirme yapmak isterse kullanabilir.
+         *
+         * @example
+         * grid.render();
+         * console.log(grid.tableElement); // Oluşturulan tabloya ait jQuery nesnesi
+         */
+        this.tableElement = null;
+
+        /**
          * Tabloya bağlı veri kümesi.
          * 
          * @type {Array<Object>}
@@ -70,6 +86,71 @@ export default class CinciGrid {
          * grid.setTableClass("table table-striped table-hover");
          */
         this.tableClasses = "";
+
+        /**
+         * Tablo başlığının gösterilip gösterilmeyeceğini belirler.
+         *
+         * @type {boolean}
+         * @default false
+         * @description `true` olduğunda tablo başlığı (title) ekranda görüntülenir.  
+         * Geliştirici `setTitle()` metodu ile başlığı tanımlayabilir.
+         */
+        this.showTitle = false;
+
+        /**
+         * Tablo başlık metnini tutar.
+         *
+         * @type {string}
+         * @default ""
+         * @description `showTitle` değeri `true` olduğunda, bu metin tablo başlığı olarak görünür.  
+         * `clearTitle()` metodu ile sıfırlanabilir.
+         */
+        this.tableTitle = "";
+
+        /**
+         * Sayfalama (pagination) özelliğinin aktif olup olmadığını belirtir.
+         *
+         * @type {boolean}
+         * @default false
+         * @description `true` olduğunda tablo verileri sayfalara bölünerek gösterilir.  
+         * `enablePagination(true)` metodu ile etkinleştirilebilir.
+         */
+        this.usePagination = false;
+
+        /**
+         * Sayfalama bileşenine (pagination UI) ait jQuery nesnesini tutar.
+         *
+         * @type {jQuery|null}
+         * @default null
+         * @description `render()` çağrıldığında, sayfalama kontrolleri oluşturulursa bu değişkende saklanır.  
+         * Geliştirici gerektiğinde özelleştirme yapmak için erişebilir.
+         */
+        this.paginationElement = null;
+
+        /**
+         * Mevcut sayfa indeksini belirtir.
+         *
+         * @type {number}
+         * @default 1
+         * @description
+         * 1 tablonun ilk sayfasını temsil eder.  
+         * Sayfa geçişlerinde bu değer güncellenir ve `render()` yeniden çalıştırılır.
+         */
+        this.index = 1;
+
+        /**
+         * Her sayfada gösterilecek satır (kayıt) sayısını belirtir.
+         *
+         * @type {number}
+         * @default 10
+         * @description
+         * `setPageSize()` metodu ile değiştirilebilir.  
+         * Sayfalama aktifse, bu değer tablo performansını ve görünümünü doğrudan etkiler.
+         *
+         * @example
+         * grid.setPageSize(25); // her sayfada 25 kayıt göster
+         */
+        this.pageSize = 10;
     }
 
     /**
@@ -96,6 +177,21 @@ export default class CinciGrid {
     setData(data) {
         if (!Array.isArray(data)) throw new Error("CinciGrid: Data bir dizi olmalı.");
         this.data = data;
+        this.#updateCount();
+        return this;
+    }
+
+    /**
+     * Tablodaki tüm verileri temizler.  
+     * Data dizisini sıfırlar ve toplam kayıt sayısını günceller.
+     *
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.clearData(); // Tüm tablo içeriğini temizler
+     */
+    clearData() {
+        this.data = [];
         this.#updateCount();
         return this;
     }
@@ -175,6 +271,86 @@ export default class CinciGrid {
         const existing = this.tableClasses.split(/\s+/).filter(Boolean);
         this.tableClasses = existing.filter(cls => !removeClasses.includes(cls)).join(" ");
         if (this.tableElement) this.tableElement.removeClass(classes);
+        return this;
+    }
+
+    /**
+     * Tabloya bir başlık (title) atar.
+     *
+     * @param {string} title - Görüntülenecek tablo başlığı.
+     * @throws {Error} Eğer değer geçerli bir string değilse hata fırlatır.
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.setTitle("Kullanıcı Listesi");
+     */
+    setTitle(title) {
+        if (typeof title !== "string")
+            throw new Error("CinciGrid: title değeri geçerli bir string olmalı.");
+        this.tableTitle = title.trim();
+        this.showTitle = true;
+        return this;
+    }
+
+    /**
+     * Tablo başlığını kaldırır ve gizler.
+     *
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.clearTitle();
+     */
+    clearTitle() {
+        this.tableTitle = "";
+        this.showTitle = false;
+        return this;
+    }
+
+    /**
+     * Sayfalama özelliğini aktif veya pasif hale getirir.
+     *
+     * @param {boolean} [enabled=true] - Sayfalamanın aktif olup olmayacağını belirler.
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.enablePagination(true);  // Sayfalama aktif
+     * grid.enablePagination(false); // Sayfalama kapalı
+     */
+    enablePagination(enabled = true) {
+        this.usePagination = enabled;
+        return this;
+    }
+
+    /**
+     * Toplam sayfa sayısını hesaplar.
+     *
+     * @private
+     * @returns {number} Toplam sayfa sayısı (en az 1 olacak şekilde).
+     * @description
+     * `totalCount` ve `pageSize` değerlerine göre sayfa sayısını döner.
+     * Eğer kayıt yoksa bile en az 1 döner.
+     */
+    #getTotalPages() {
+        return Math.ceil(this.totalCount / this.pageSize) || 1;
+    }
+
+    /**
+     * Her sayfada görüntülenecek kayıt sayısını ayarlar.
+     *
+     * @param {number} size - Sayfa başına gösterilecek satır sayısı.
+     * @throws {Error} Geçersiz veya 0'dan küçük bir değer verilirse hata fırlatır.
+     * @returns {CinciGrid} Mevcut tablo örneğini döner.
+     *
+     * @example
+     * grid.setPageSize(20); // her sayfada 20 kayıt göster
+     */
+    setPageSize(size) {
+        const num = parseInt(size);
+        if (isNaN(num) || num <= 0) {
+            throw new Error("CinciGrid: pageSize pozitif bir sayı olmalı.");
+        }
+        this.pageSize = num;
+        this.index = 1;
         return this;
     }
 }
