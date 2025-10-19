@@ -230,6 +230,26 @@ export default class CinciGrid {
          * ];
          */
         this.actionColumns = [];
+
+        /**
+         * @property {string} headerContainerStyle
+         * @description Tablo üst (header) kontrol alanının özel CSS stillerini tanımlar.  
+         * Geliştirici, tablo başlığı veya global arama alanının bulunduğu konteynerin görünümünü özelleştirebilir.
+         *
+         * @example
+         * grid.headerContainerStyle = "background-color: #f8f9fa; border-radius: 8px;";
+         */
+        this.headerContainerStyle = "";
+
+        /**
+         * @property {string} footerContainerStyle
+         * @description Tablo alt (footer) kontrol alanının özel CSS stillerini tanımlar.  
+         * Genellikle sayfalama ve toplam bilgi alanının stilini değiştirmek için kullanılır.
+         *
+         * @example
+         * grid.footerContainerStyle = "background-color: #fff; border-top: 1px solid #ddd;";
+         */
+        this.footerContainerStyle = "";
     }
 
     /**
@@ -614,6 +634,42 @@ export default class CinciGrid {
             onClick: typeof 
             onClick === "function" ? onClick : null 
         });
+        return this;
+    }
+
+    /**
+     * @method setHeaderContainerStyle
+     * @description Tablo başlığı (header) bölümüne özel inline CSS stilleri uygular.  
+     * Bu metot, tablo başlığı ve kontrol alanlarının geliştirici tarafından özelleştirilmesini sağlar.
+     *
+     * @param {string} style - Uygulanacak CSS stil kuralları (örneğin `"background:#f8f9fa; border-radius:6px;"`).
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.setHeaderContainerStyle("background:#f8f9fa; border-radius:8px;");
+     */
+    setHeaderContainerStyle(style) {
+        if (typeof style !== "string")
+            throw new Error("CinciGrid: headerContainer style bir string olmalı.");
+        this.headerContainerStyle = style.trim();
+        return this;
+    }
+
+    /**
+     * @method setFooterContainerStyle
+     * @description Tablo alt kısmına (footer) özel inline CSS stilleri uygular.  
+     * Genellikle toplam kayıt bilgisi veya sayfalama alanını görsel olarak düzenlemek için kullanılır.
+     *
+     * @param {string} style - Uygulanacak CSS stil kuralları (örneğin `"border-top:1px solid #ccc; padding:4px;"`).
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.setFooterContainerStyle("border-top:1px solid #ccc; padding:4px;");
+     */
+    setFooterContainerStyle(style) {
+        if (typeof style !== "string")
+            throw new Error("CinciGrid: footerContainer style bir string olmalı.");
+        this.footerContainerStyle = style.trim();
         return this;
     }
 }
