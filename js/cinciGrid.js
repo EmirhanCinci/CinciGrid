@@ -1043,7 +1043,7 @@ export default class CinciGrid {
 
         const footerContainer = $(
             `<div class="footer-container d-flex justify-content-between align-items-center py-3 px-2"
-                style="${this.foooterContainerStyle}">
+                style="${this.footerContainerStyle}">
             </div>`
         );
 
@@ -1134,5 +1134,572 @@ export default class CinciGrid {
         ul.append(makeButton("Son »", current === totalPages, false, () => (this.index = totalPages)));
 
         return ul;
+    }
+
+    /**
+     * @private
+     * @method #buildHeader
+     * @description Tablo başlığını (`<thead>`) oluşturur.  
+     * Seçim kutusu, satır numarası, sütun başlıkları ve işlem sütunlarını dinamik olarak ekler.
+     *
+     * @returns {jQuery} Tamamlanmış `<thead>` elementi.
+     */
+    #buildHeader() {
+        const thead = $(`<thead></thead>`);
+        const theadRow = $(`<tr></tr>`);
+
+        if (this.enableSelection) {
+            const selectAllTh = this.#buildHeaderSelection();
+            theadRow.append(selectAllTh);
+        }
+
+        if (this.showRowNumbers) {
+            const rowNumbersTh = this.#buildHeaderRowNumbers();
+            theadRow.append(rowNumbersTh);
+        }
+
+        for (const key in this.columnSettings) {
+            const propertyColumn = this.#buildHeaderPropertyColumn(key);
+            theadRow.append(propertyColumn);
+        }
+
+        if (this.actionColumns.length > 0) {
+            const actionTh = this.#buildHeaderActionColumn();
+            theadRow.append(actionTh);
+        }
+
+        thead.append(theadRow);
+        this._lastColumnCount = theadRow.find("th").length;
+        return thead;
+    }
+
+    /**
+     * @private
+     * @method #buildHeaderSelection
+     * @description Tablonun en solunda bulunan “Tümünü Seç” kutusunu oluşturur.  
+     * Kullanıcı bu kutuyu işaretlediğinde tüm satırlar seçilir veya temizlenir.
+     *
+     * @returns {jQuery} Seçim kutusunu içeren `<th>` elementi.
+     */
+    #buildHeaderSelection() {
+        const selectAllChecked = this.selectedRows.size > 0 && this.selectedRows.size === this.data.length;
+        const selectAllTh = $(`
+            <th class="text-center" style="width:40px;">
+                <input type="checkbox" class="select-all-checkbox" ${selectAllChecked ? "checked" : ""}>
+            </th>
+        `);
+        selectAllTh.find("input").on("change", (e) => {
+            const checked = e.target.checked;
+            if (checked) {
+                this.data.forEach((_, i) => this.selectedRows.add(i));
+            } else {
+                this.selectedRows.clear();
+            }
+            this.render();
+        });
+        return selectAllTh;
+    }
+
+    /**
+     * @private
+     * @method #buildHeaderRowNumbers
+     * @description Satır numarası sütunu başlığını oluşturur.
+     * @returns {string} `<th>` etiketi içeren HTML string.
+     */
+    #buildHeaderRowNumbers() {
+        return `<th class="text-center" style="width:50px;">#</th>`;
+    }
+
+    /**
+     * @private
+     * @method #buildHeaderPropertyColumn
+     * @description Her bir sütun için başlık hücresi oluşturur.  
+     * Sıralama, filtreleme ve arama ikonlarını içerir.
+     *
+     * @param {string} key - Sütunun anahtar adı.
+     * @returns {jQuery|null} Sütun başlığını temsil eden `<th>` elementi veya `null`.
+     */
+    #buildHeaderPropertyColumn(key) {
+        const col = this.columnSettings[key];
+        if (!col.visible) return null;
+        const hasIcons = col.sortable || col.filterable || col.searchable;
+        const appliedHeaderAlign = hasIcons ? "" : (col.headerAlign || "text-start");
+        const th = $(`<th class="${appliedHeaderAlign}" style="position:relative;"></th>`);
+        const inner = $(`
+            <div class="th-inner d-flex align-items-center justify-content-between" 
+                style="gap:4px; width:100%;">
+                <span class="th-label text-truncate">${col.label || key}</span>
+                ${hasIcons ? '<div class="icon-group d-flex align-items-center gap-1"></div>' : ''}
+            </div>
+        `);
+        const iconGroup = inner.find(".icon-group");
+        if (col.sortable) {
+            const sortIcon = this.#buildSortIcon(key);
+            iconGroup.append(sortIcon);
+        }
+        if (col.filterable) {
+            const filterIcon = this.#buildFilterIcon(key, col);
+            iconGroup.append(filterIcon);
+        }
+        if (col.searchable === true) {
+            const searchIcon = this.#builSearchIcon(key, col);
+            iconGroup.append(searchIcon);
+        }
+        th.append(inner);
+        return th;
+    }
+
+    /**
+     * @private
+     * @method #buildSortIcon
+     * @description Belirli bir sütun için sıralama ikonunu oluşturur (▲▼).  
+     * Sıralama durumu mevcutsa simge güncellenir.
+     *
+     * @param {string} key - Sıralama yapılacak sütun anahtarı.
+     * @returns {jQuery} Sıralama ikonunu içeren `<span>` elementi.
+     */
+    #buildSortIcon(key) {
+        const found = this.sortKey === key ? this.sortOrder : null;
+        const sortIcon = $(`<span class="sort-icon" style="font-size:12px; opacity:${found ? 1 : 0.6}; cursor:pointer;">⇅</span>`);
+        if (found === "asc") sortIcon.text("▲");
+        else if (found === "desc") sortIcon.text("▼");
+        sortIcon.on("click", (e) => {
+            e.stopPropagation();
+            if (this.sortKey === key) {
+                if (this.sortOrder === "asc") this.sortOrder = "desc";
+                else if (this.sortOrder === "desc") {
+                    this.sortKey = null;
+                    this.sortOrder = "asc";
+                }
+            } else {
+                this.sortKey = key;
+                this.sortOrder = "asc";
+            }
+            this.render();
+        });
+        return sortIcon;
+    }
+
+    /**
+     * @private
+     * @method #buildFilterIcon
+     * @description Filtre ikonunu oluşturur (⛃).  
+     * Tıklanınca filtre dropdown menüsü açar.
+     *
+     * @param {string} key - Filtre uygulanacak sütun anahtarı.
+     * @param {object} col - Sütun ayarları.
+     * @returns {jQuery} Filtre ikonunu içeren `<span>` elementi.
+     */
+    #buildFilterIcon(key, col) {
+        const isFiltered = Array.isArray(this.activeFilters[key]) && this.activeFilters[key].length > 0;
+        const filterIcon = $(`<span class="filter-icon" style="cursor:pointer; opacity:${isFiltered ? 1 : 0.6}; color:${isFiltered ? '#007bff' : 'inherit'};">⛃</span>`);
+        filterIcon.on("click", (e) => {
+            e.stopPropagation();
+            $(".filter-dropdown").remove();
+            const dropdown = this.#buildFilterDropdown(key, col);
+            $("body").append(dropdown);
+            const offset = filterIcon.offset();
+            dropdown.css({
+                top: offset.top + filterIcon.outerHeight(),
+                left: offset.left - 10,
+            });
+            const closeDropdown = (event) => {
+                if (!dropdown.is(event.target) && dropdown.has(event.target).length === 0) {
+                    dropdown.remove();
+                    $(document).off("click", closeDropdown);
+                }
+            };
+            $(document).on("click", closeDropdown);
+        });
+        return filterIcon;
+    }
+
+    /**
+     * @private
+     * @method #builSearchIcon
+     * @description Sütun bazlı arama simgesini oluşturur (🔍).  
+     * Tıklanınca başlık üzerinde arama kutusu açar.
+     *
+     * @param {string} key - Arama yapılacak sütun anahtarı.
+     * @param {object} col - Sütun yapılandırması.
+     * @returns {jQuery} Arama ikonunu içeren `<span>` elementi.
+     */
+    #builSearchIcon(key, col) {
+        const hasSearch = this.columnSearches && this.columnSearches[key];
+        const searchIcon = $(`<span class="search-icon" style="cursor:pointer; opacity:${hasSearch ? 1 : 0.6}; color:${hasSearch ? '#007bff' : 'inherit'};">🔍</span>`);
+        searchIcon.on("click", (e) => {
+            e.stopPropagation();
+            const thWidth = th.outerWidth();
+            inner.hide();
+            const input = $(`<input type="text" class="form-control form-control-sm column-search-box" placeholder="${col.label || key} ara..." style="width:${thWidth}px; position:absolute; top:0; left:0; height:100%; font-size:13px; padding:2px 6px;">`);
+            if (this.columnSearches[key]) input.val(this.columnSearches[key]);
+            th.append(input);
+            input.focus();
+            input.on("keydown", (ev) => {
+                if (ev.key === "Enter") {
+                    const val = ev.target.value.trim();
+                    if (val) this.columnSearches[key] = val;
+                    else delete this.columnSearches[key];
+                    this.index = 1;
+                    this.render();
+                } else if (ev.key === "Escape") {
+                    input.remove();
+                    inner.show();
+                }
+            });
+            input.on("blur", () => {
+                input.remove();
+                inner.show();
+            });
+        });
+        return searchIcon;
+    }
+
+    /**
+     * @private
+     * @method #buildHeaderActionColumn
+     * @description Tablo işlem butonları için başlık hücresini oluşturur.
+     * @returns {string} İşlemler başlığını içeren `<th>` HTML string.
+     */
+    #buildHeaderActionColumn() {
+        return `<th class="text-center">İşlemler</th>`;
+    }
+
+    /**
+     * @private
+     * @method #buildBody
+     * @description Tablo gövdesini (`<tbody>`) oluşturur.  
+     * Satır seçimi, numaralandırma, sütun değerleri ve işlem butonlarını ekler.
+     *
+     * @returns {jQuery} Tamamlanmış `<tbody>` elementi.
+     */
+    #buildBody() {
+        const tbody = $(`<tbody></tbody>`);
+        const pageData = this.#getPagedData();
+
+        if (pageData.length === 0) {
+            const totalColumns = this._lastColumnCount || Object.values(this.columnSettings).filter(c => c.visible !== false).length || 1;
+            const tr = $('<tr></tr>');
+            const td = $(`<td colspan="${totalColumns}" class="text-center">İçerik bulunamadı</td>`);
+            tr.append(td);
+            tbody.append(tr);
+            return tbody;
+        }
+
+        pageData.forEach(row => {
+            const tr = $(`<tr></tr>`);
+
+            if (this.enableSelection) {
+                const selectionTd = this.#buildBodySelection(row);
+                tr.append(selectionTd);
+            }
+
+            if (this.showRowNumbers) {
+                const rowNumberTd = this.#buildBodyRowNumbers(row, pageData);
+                tr.append(rowNumberTd);
+            }
+
+            for (const key in this.columnSettings) {
+                const col = this.columnSettings[key];
+                if (!col.visible) continue;
+                let value = row[key];
+                if (typeof col.formatter === "function") {
+                    value = col.formatter(row);
+                }
+                const cellClass = typeof col.cellClass === "function" ? col.cellClass(row) : col.cellClass || "";
+                const inlineStyle = typeof col.contentStyle === "function" ? col.contentStyle(row) : col.contentStyle || "";
+                const td = $(`<td class="${col.contentAlign || ''} ${cellClass || ''}" style="${inlineStyle}">${value || ''}</td>`);
+                tr.append(td);
+            }
+
+            if (this.actionColumns.length > 0) {
+                const actionTd = this.#buildBodyActionColumn(row);
+                tr.append(actionTd);
+            }
+
+            tbody.append(tr);
+        });
+
+        return tbody;
+    }
+
+    /**
+     * @private
+     * @method #buildBodySelection
+     * @description Her satır için seçim kutusunu oluşturur.  
+     * Seçim durumu değiştiğinde `selectedRows` güncellenir.
+     *
+     * @param {object} row - İlgili satır verisi.
+     * @returns {jQuery} Seçim kutusunu içeren `<td>` elementi.
+     */
+    #buildBodySelection(row) {
+        const globalIndex = this.data.indexOf(row);
+        const isChecked = this.selectedRows.has(globalIndex);
+
+        const checkboxTd = $(`
+            <td class="text-center">
+                <input type="checkbox" class="row-checkbox" ${isChecked ? "checked" : ""}>
+            </td>
+        `);
+
+        checkboxTd.find("input").on("change", (e) => {
+            if (e.target.checked) this.selectedRows.add(globalIndex);
+            else this.selectedRows.delete(globalIndex);
+            this.#updateSelectAllState();
+            let info = this.selector.find('.selectedRowInfo');
+            if (info.length === 0) {
+                info = $('<span class="selectedRowInfo text-muted small ms-2"></span>');
+                this.selector.find('.table-header-right').prepend(info);
+            }
+            if (this.selectedRows.size > 0) {
+                info.text(`${this.selectedRows.size} satır seçili`).show();
+            } else {
+                info.text('').hide();
+            }
+        });
+
+        return checkboxTd;
+    }
+
+    /**
+     * @private
+     * @method #buildBodyRowNumbers
+     * @description Satır numarasını gösteren hücreyi oluşturur.
+     * @param {object} row - Satır verisi.
+     * @param {Array<Object>} pageData - Sayfadaki veri dizisi.
+     * @returns {string} `<td>` etiketi içeren HTML string.
+     */
+    #buildBodyRowNumbers(row, pageData) {
+        const globalIndex = this.usePagination ? (this.index - 1) * this.pageSize + pageData.indexOf(row) + 1 : pageData.indexOf(row) + 1;
+        return `<td class="text-center">${globalIndex}</td>`;
+    }
+
+    /**
+     * @private
+     * @method #buildBodyActionColumn
+     * @description Her satır için işlem butonlarını (`edit`, `delete` vb.) oluşturur.
+     * @param {object} row - Satır verisi.
+     * @returns {jQuery} İşlem butonlarını içeren `<td>` elementi.
+     */
+    #buildBodyActionColumn(row) {
+        const td = $('<td class="text-center"></td>');
+        this.actionColumns.forEach(action => {
+            const btn = $(`<button class="${action.className}" title="${action.label}">${action.icon ? `<i class="${action.icon}"></i>` : action.label}</button>`);
+            if (action.onClick) {
+                btn.on("click", async () => {
+                    try {
+                        btn.prop("disabled", true).addClass("opacity-50");
+                        const result = action.onClick(row);
+                        if (result instanceof Promise) await result;
+                    } catch (err) {
+                        console.error("CinciTable: action butonu hata verdi:", err);
+                    } finally {
+                        btn.prop("disabled", false).removeClass("opacity-50");
+                    }
+                });
+            }
+            td.append(btn);
+        });
+        return td;
+    }
+
+    /**
+     * @private
+     * @method #buildFooter
+     * @description Tablo alt kısmını (`<tfoot>`) oluşturur.  
+     * Aggregate (toplam, ortalama, sayım) hesaplamalarını içerir.
+     *
+     * @returns {jQuery|null} Footer öğesi veya `null`.
+     */
+    #buildFooter() {
+        const footerCols = Object.entries(this.columnSettings).filter(([_, col]) => col.aggregate);
+        if (footerCols.length === 0) return null;
+
+        const tfoot = $('<tfoot></tfoot>');
+        const tr = $('<tr></tr>');
+
+        if (this.enableSelection) {
+            const footerSelectionTd = this.#buildFooterSelection();
+            tr.append(footerSelectionTd);
+        }
+
+        if (this.showRowNumbers) {
+            const footerRowNumbersTd = this.#buildFooterRowNumbers();
+            tr.append(footerRowNumbersTd);
+        }
+
+        let allFilteredData = [...this.data];
+        if (this.globalSearch && this.globalSearch.trim() !== "") {
+            const term = this.globalSearch.toLowerCase();
+            allFilteredData = allFilteredData.filter(row => {
+                return Object.keys(this.columnSettings).some(key => {
+                    const col = this.columnSettings[key];
+                    if (!col.visible) return false;
+                    const text = this.#getCellSearchableText(row, key).toLowerCase();
+                    return text.includes(term);
+                });
+            });
+        }
+        if (this.columnSearches && Object.keys(this.columnSearches).length > 0) {
+            allFilteredData = allFilteredData.filter(row => {
+                return Object.entries(this.columnSearches).every(([key, term]) => {
+                    if (!term) return true;
+                    const haystack = this.#getCellSearchableText(row, key).toLowerCase();
+                    return haystack.includes(String(term).toLowerCase());
+                });
+            });
+        }
+        if (Object.keys(this.activeFilters).length > 0) {
+            allFilteredData = allFilteredData.filter(row => {
+                return Object.entries(this.activeFilters).every(([key, values]) => {
+                    if (!values || values.length === 0) return true;
+                    const col = this.columnSettings[key];
+                    const cellValue = typeof col.filterSource === "function" ? col.filterSource(row) : row[key];
+                    return values.includes(cellValue);
+                });
+            });
+        }
+        for (const key in this.columnSettings) {
+            const col = this.columnSettings[key];
+            if (!col.visible) continue;
+            let result = "";
+            if (col.aggregate) {
+                const values = allFilteredData.map(row => parseFloat(row[key])).filter(v => !isNaN(v));
+                if (col.aggregate === "sum") {
+                    result = values.reduce((a, b) => a + b, 0);
+                } else if (col.aggregate === "avg") {
+                    result = values.length ? (values.reduce((a, b) => a + b, 0) / values.length).toFixed(2) : 0;
+                } else if (col.aggregate === "count") {
+                    result = values.length;
+                } else if (typeof col.aggregate === "function") {
+                    result = col.aggregate(allFilteredData);
+                }
+                if (col.aggregateLabel) {
+                    result = `${col.aggregateLabel}: ${result}`;
+                }
+            }
+            const td = $(`<td class="${col.contentAlign || ''} fw-bold">${result}</td>`);
+            tr.append(td);
+        }
+
+        if (this.actionColumns.length > 0) {
+            const footerActionTd = this.#buildFooterActionColumn();
+            tr.append(footerActionTd);
+        }
+
+        tfoot.append(tr);
+        return tfoot;
+    }
+
+    /**
+     * @private
+     * @method #buildFooterSelection
+     * @description Footer’da seçim sütunu boş hücresini oluşturur.
+     * @returns {string} `<td>` etiketi içeren HTML string.
+     */
+    #buildFooterSelection() {
+        return `<td class="text-center fw-bold"></td>`;
+    }
+
+    /**
+     * @private
+     * @method #buildFooterRowNumbers
+     * @description Footer satır numarası boş hücresini oluşturur.
+     * @returns {string} `<td>` etiketi içeren HTML string.
+     */
+    #buildFooterRowNumbers() {
+        return `<td class="text-center fw-bold"></td>`;
+    }
+
+    /**
+     * @private
+     * @method #buildFooterActionColumn
+     * @description Footer işlem sütunu boş hücresini oluşturur.
+     * @returns {string} `<td>` etiketi içeren HTML string.
+     */
+    #buildFooterActionColumn() {
+        return `<td class="text-center fw-bold"></td>`;
+    }
+
+    /**
+     * @method render
+     * @description Tabloyu ve bileşenlerini (header, body, footer, pagination, title) yeniden oluşturur.  
+     * Ana render metodudur; tablo içeriği güncellendiğinde çağrılır.
+     *
+     * @returns {CinciGrid} Mevcut sınıf örneğini döner (method chaining için).
+     */
+    render() {
+        const table = $(`<table id="${this.tableId || ''}" class="custom-table m-0 ${this.tableClasses || ''}"></table>`);
+        table.append(this.#buildHeader());
+        table.append(this.#buildBody());
+        const footer = this.#buildFooter();
+        if (footer) table.append(footer);
+        this.selector.empty();
+
+        const headerContainer = this.#buildHeaderContainer();
+
+        if (this.showTitle && this.tableTitle) {
+            const titleEl = $(`<h5 class="mb-0 fw-bold">${this.tableTitle}</h5>`);
+            headerContainer.find(".table-header-left").append(titleEl);
+        }
+
+        if (this.enableGlobalSearchBar) {
+            const searchInput = $(`<input type="text" class="form-control form-control-sm global-search-input" placeholder="${this.globalSearchPlaceholder}" style="width: 250px;">`);
+            searchInput.val(this.globalSearch);
+            searchInput.on("keydown", (e) => {
+                if (e.key === "Enter") {
+                    this.globalSearch = e.target.value.trim();
+                    this.index = 1;
+                    this.render();
+                }
+            });
+            headerContainer.find(".table-header-right").append(searchInput);
+        }
+
+        const resetBtn = $(`<button class="btn btn-sm btn-outline-secondary reset-table-btn" title="Filtreleri, aramaları ve sıralamayı sıfırla">⟳</button>`);
+        const isDefaultState = !this.globalSearch && Object.keys(this.activeFilters).length === 0 && Object.keys(this.columnSearches).length === 0 && !this.sortKey && this.sortOrder === "asc" && this.index === 1;
+        resetBtn.prop("disabled", isDefaultState);
+        resetBtn.on("click", () => {
+            this.globalSearch = "";
+            this.columnSearches = {};
+            this.activeFilters = {};
+            this.sortKey = null;
+            this.sortOrder = "asc";
+            this.index = 1;
+            this.render();
+        });
+        headerContainer.find(".table-header-right").append(resetBtn);
+
+        if (this.enableSelection && this.selectedRows.size > 0) {
+            const info = $(`<span class="selectedRowInfo text-muted small">${this.selectedRows.size} satır seçili</span>`);
+            headerContainer.find(".table-header-right").prepend(info);
+        }
+
+        this.selector.append(headerContainer);
+        this.selector.append(table);
+        this.tableElement = table;
+        if (this.usePagination && this.totalCount > 0) {
+            const footerContainer = this.#buildFooterContainer();
+            if (footerContainer) {
+                this.selector.append(footerContainer);
+                this.paginationElement = footerContainer;
+            }
+        }
+        return this;
+    }
+
+    /**
+     * @private
+     * @method #buildHeaderContainer
+     * @description Başlık (title, global search, reset, seçili satır bilgisi) alanını oluşturur.
+     * @returns {jQuery} Header container (`<div>`) elementi.
+     */
+    #buildHeaderContainer() {
+        return $(`
+            <div class="headerContainer d-flex justify-content-between align-items-center py-3 px-2" style="${this.headerContainerStyle}">
+                <div class="table-header-left"></div>
+                <div class="table-header-right d-flex align-items-center gap-2"></div>
+            </div>
+        `);
     }
 }

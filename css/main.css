@@ -1,0 +1,77 @@
+.table-sticky thead th {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+}
+
+.th-inner {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.th-inner .sort-icon {
+    margin-left: auto;
+    opacity: 0.6;
+    font-size: 12px;
+}
+
+th.sortable { 
+    cursor: pointer;
+}
+
+th.sortable.active .sort-icon { 
+    opacity: 1; 
+}
+
+.filter-icon:hover {
+    opacity: 1;
+}
+
+.filter-dropdown {
+    font-size: 0.9rem;
+}
+
+th .th-inner {
+    white-space: nowrap;
+}
+
+th .icon-group span:hover {
+    opacity: 1 !important;
+}
+
+th:first-child,
+td:first-child {
+    width: 50px;
+    text-align: center;
+}
+
+th .th-label {
+    white-space: nowrap;
+}
+
+th.text-center .th-label {
+    text-align: center !important;
+    width: 100%;
+}
+
+th.text-end .th-label {
+    text-align: right !important;
+    width: 100%;
+}
+
+table.custom-table td, 
+table.custom-table th {
+    vertical-align: middle !important;
+}
+
+.headerContainer {
+    border-top-left-radius: 8px; 
+    border-top-right-radius: 8px;
+}
+
+.footer-container {
+    border-bottom-left-radius: 8px; 
+    border-bottom-right-radius: 8px;
+}
