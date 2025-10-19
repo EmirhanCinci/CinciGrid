@@ -151,6 +151,16 @@ export default class CinciGrid {
          * grid.setPageSize(25); // her sayfada 25 kayıt göster
          */
         this.pageSize = 10;
+
+        /**
+         * Satır numaralarının tabloda gösterilip gösterilmeyeceğini belirten bayrak.
+         * false olduğunda tablo satırlarının başında sıra numarası görünmez.
+         * 
+         * @type {boolean}
+         * @default false
+         */
+        this.showRowNumbers = false;
+
     }
 
     /**
@@ -351,6 +361,21 @@ export default class CinciGrid {
         }
         this.pageSize = num;
         this.index = 1;
+        return this;
+    }
+
+    /**
+     * Satır numaralarının tabloda gösterilip gösterilmeyeceğini ayarlar.
+     *
+     * @param {boolean} [enabled=true] - Satır numaralarının aktif edilip edilmeyeceğini belirtir.
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.enableRowNumbers(true);  // Satır numaralarını göster
+     * grid.enableRowNumbers(false); // Satır numaralarını gizle
+     */
+    enableRowNumbers(enabled = true) {
+        this.showRowNumbers = enabled;
         return this;
     }
 }
