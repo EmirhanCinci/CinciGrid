@@ -204,6 +204,19 @@ export default class CinciGrid {
          * @default "Tabloda ara..."
          */
         this.globalSearchPlaceholder = "Tabloda ara...";
+
+        /**
+         * @property {Object<string, Object>} columnSettings
+         * @description Tabloda görüntülenecek sütunların yapılandırma (ayar) nesnelerini tutar.  
+         * Her bir sütun `key` adıyla tanımlanır ve görünüm, hizalama, filtreleme, sıralama, biçimlendirme gibi özellikleri içerir.
+         *
+         * @example
+         * grid.columnSettings = {
+         *   name: { label: "Ad", sortable: true, searchable: true },
+         *   age: { label: "Yaş", contentAlign: "text-center" }
+         * };
+         */
+        this.columnSettings = {};
     }
     /**
      * @private
@@ -465,36 +478,92 @@ export default class CinciGrid {
         return Array.from(this.selectedRows).map(i => this.data[i]);
     }
 
+    /**
+     * @method enableGlobalSearch
+     * @description Genel arama (global search) özelliğini aktif veya pasif hale getirir.
+     *
+     * @param {boolean} [enabled=true] - Arama kutusunu etkinleştirir veya devre dışı bırakır.
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.enableGlobalSearch(true);  // Arama kutusunu etkinleştir
+     * grid.enableGlobalSearch(false); // Arama kutusunu gizle
+     */
+    enableGlobalSearch(enabled = true) {
+        this.enableGlobalSearchBar = enabled;
+        return this;
+    }
 
     /**
- * @method enableGlobalSearch
- * @description Genel arama (global search) özelliğini aktif veya pasif hale getirir.
- *
- * @param {boolean} [enabled=true] - Arama kutusunu etkinleştirir veya devre dışı bırakır.
- * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
- *
- * @example
- * grid.enableGlobalSearch(true);  // Arama kutusunu etkinleştir
- * grid.enableGlobalSearch(false); // Arama kutusunu gizle
- */
-enableGlobalSearch(enabled = true) {
-    this.enableGlobalSearchBar = enabled;
-    return this;
-}
+     * @method setGlobalSearchPlaceholder
+     * @description Genel arama kutusunun placeholder metnini değiştirir.
+     *
+     * @param {string} text - Arama kutusunda gösterilecek placeholder metni.
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.setGlobalSearchPlaceholder("Kayıt ara...");
+     */
+    setGlobalSearchPlaceholder(text) {
+        this.globalSearchPlaceholder = text;
+        return this;
+    }
 
-/**
- * @method setGlobalSearchPlaceholder
- * @description Genel arama kutusunun placeholder metnini değiştirir.
- *
- * @param {string} text - Arama kutusunda gösterilecek placeholder metni.
- * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
- *
- * @example
- * grid.setGlobalSearchPlaceholder("Kayıt ara...");
- */
-setGlobalSearchPlaceholder(text) {
-    this.globalSearchPlaceholder = text;
-    return this;
-}
+    /**
+     * @method setColumn
+     * @description Yeni bir sütun ekler veya mevcut bir sütunun ayarlarını günceller.  
+     * Her sütun için görünüm, sıralama, filtreleme, biçimlendirme gibi detaylı özellikler belirlenebilir.
+     *
+     * @param {string} key - Sütunun veri anahtarı (örneğin "name", "age").
+     * @param {Object} settings - Sütun yapılandırma ayarlarını içeren nesne.
+     * @param {string} [settings.label] - Sütunun başlık etiketi. Belirtilmezse `key` değeri kullanılır.
+     * @param {string} [settings.headerAlign="text-start"] - Başlık hücresinin hizalaması (`text-start`, `text-center`, `text-end`).
+     * @param {string} [settings.contentAlign="text-start"] - İçerik hücresinin hizalaması.
+     * @param {boolean} [settings.sortable=false] - Sütunun sıralanabilir olup olmadığını belirler.
+     * @param {boolean} [settings.visible=true] - Sütunun görünür olup olmadığını belirler.
+     * @param {boolean} [settings.filterable=false] - Filtreleme özelliğini aktif eder.
+     * @param {boolean} [settings.searchable=false] - Arama özelliğini aktif eder.
+     * @param {Function} [settings.formatter] - Hücre içeriğini özel biçimlendirmeyle döndürmek için fonksiyon.
+     * @param {Function|string} [settings.filterSource] - Filtre seçeneklerini veya hücrede kullanılacak değeri belirleyen kaynak.
+     * @param {Function} [settings.searchSource] - Arama sırasında kullanılacak alternatif veri kaynağını döndürür.
+     * @param {Function|string} [settings.contentStyle] - Hücreye özel CSS stilini belirleyen string veya fonksiyon.
+     * @param {Function|string} [settings.cellClass] - Hücreye özel CSS sınıfını belirleyen string veya fonksiyon.
+     * @param {string} [settings.aggregateLabel] - Footer’da gösterilecek toplama etiketi (örneğin “Toplam”).
+     * @param {string|Function} [settings.aggregate] - Footer hesaplama türü (`sum`, `avg`, `count`) veya özel hesaplama fonksiyonu.
+     * 
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.setColumn("price", {
+     *   label: "Fiyat",
+     *   sortable: true,
+     *   contentAlign: "text-end",
+     *   formatter: row => `${row.price.toFixed(2)} ₺`
+     * });
+     */
+    setColumn(key, settings) {
+        if (typeof key !== "string" || key.trim() === "")
+            throw new Error("CinciGrid: Sütun key geçerli bir string olmalı.");
+        if (typeof settings !== "object" || settings === null || Array.isArray(settings))
+            throw new Error("CinciGrid: Sütun ayarları geçerli bir obje olmalı.");
 
+        const colSettings = {
+            label: typeof settings.label === "string" ? settings.label : key,
+            headerAlign: typeof settings.headerAlign === "string" ? settings.headerAlign : "text-start",
+            contentAlign: typeof settings.contentAlign === "string" ? settings.contentAlign : "text-start",
+            contentStyle: typeof settings.contentStyle === "function" ? settings.contentStyle : (typeof settings.contentStyle === "string" ? settings.contentStyle : ""),
+            sortable: typeof settings.sortable === "boolean" ? settings.sortable : false,
+            visible: typeof settings.visible === "boolean" ? settings.visible : true,
+            cellClass: typeof settings.cellClass === "function" ? settings.cellClass : (typeof settings.cellClass === "string" ? settings.cellClass : ""),
+            formatter: typeof settings.formatter === "function" ? settings.formatter : null,
+            filterable: typeof settings.filterable === "boolean" ? settings.filterable : false,
+            filterSource: typeof settings.filterSource === "function" ? settings.filterSource : (typeof settings.filterSource === "string" ? settings.filterSource : ""),
+            aggregateLabel: typeof settings.aggregateLabel === "string" ? settings.aggregateLabel : "",
+            aggregate: typeof settings.aggregate === "function" ? settings.aggregate : (typeof settings.aggregate === "string" ? settings.aggregate.toLowerCase() : null),
+            searchable: typeof settings.searchable === "boolean" ? settings.searchable : false,
+            searchSource: typeof settings.searchSource === "function" ? settings.searchSource : null,
+        };
+        this.columnSettings[key] = colSettings;
+        return this;
+    }
 }
