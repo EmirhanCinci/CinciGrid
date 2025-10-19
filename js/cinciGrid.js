@@ -161,8 +161,24 @@ export default class CinciGrid {
          */
         this.showRowNumbers = false;
 
-    }
+        /**
+         * Satır seçim özelliğinin aktif olup olmadığını belirten bayrak.
+         * false olduğunda tablo satırlarının solunda seçim kutucukları (checkbox) gösterilmez.
+         * 
+         * @type {boolean}
+         * @default false
+         */
+        this.enableSelection = false;
 
+        /**
+         * Seçili satırların indekslerini tutan küme (Set).
+         * Her seçim değişikliğinde güncellenir.
+         * 
+         * @type {Set<number>}
+         * @default new Set()
+         */
+        this.selectedRows = new Set();
+    }
     /**
      * @private
      * @method #updateCount
@@ -376,6 +392,22 @@ export default class CinciGrid {
      */
     enableRowNumbers(enabled = true) {
         this.showRowNumbers = enabled;
+        return this;
+    }
+
+    /**
+     * Tablo satırlarının seçilebilir olup olmadığını ayarlar.
+     * 
+     * @param {boolean} [enabled=true] - Satır seçimini aktif veya pasif eder.
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.enableRowSelection(true);  // Satır seçimi aktif
+     * grid.enableRowSelection(false); // Satır seçimi pasif ve tüm seçimler temizlenir
+     */
+    enableRowSelection(enabled = true) {
+        this.enableSelection = enabled;
+        if (!enabled) this.selectedRows.clear();
         return this;
     }
 }
