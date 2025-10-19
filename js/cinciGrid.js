@@ -410,4 +410,18 @@ export default class CinciGrid {
         if (!enabled) this.selectedRows.clear();
         return this;
     }
+
+    /**
+     * Seçili satırların verilerini döner.
+     * 
+     * @returns {Array<object>} Seçili satırlara karşılık gelen veri nesnelerinin dizisini döner.
+     *
+     * @example
+     * const selected = grid.getSelectedRows();
+     * console.log(selected);
+     * [{ id: 1, name: "Ali" }, { id: 3, name: "Ayşe" }]
+     */
+    getSelectedRows() {
+        return Array.from(this.selectedRows).map(i => this.data[i]);
+    }
 }
