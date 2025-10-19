@@ -190,6 +190,20 @@ export default class CinciGrid {
     }
 
     /**
+     * Toplam kayıt sayısını döner.
+     * 
+     * @method getTotalCount
+     * @returns {number} Tabloya ait toplam veri (kayıt) sayısını döner.
+     *
+     * @example
+     * const total = grid.getTotalCount();
+     * console.log(`Toplam ${total} kayıt var.`);
+     */
+    getTotalCount() {
+        return this.totalCount;
+    }
+
+    /**
      * Yeni veri kümesini tabloya atar.
      * 
      * @param {Array<Object>} data - Gösterilecek veri kümesi (her satır bir nesne olarak temsil edilir).
