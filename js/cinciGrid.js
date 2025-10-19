@@ -85,7 +85,7 @@ export default class CinciGrid {
          * @example
          * grid.setTableClass("table table-striped table-hover");
          */
-        this.tableClasses = "";
+        this.tableClasses = "table table-striped table-bordered table-hover";
 
         /**
          * Tablo başlığının gösterilip gösterilmeyeceğini belirler.
@@ -239,7 +239,7 @@ export default class CinciGrid {
          * @example
          * grid.headerContainerStyle = "background-color: #f8f9fa; border-radius: 8px;";
          */
-        this.headerContainerStyle = "";
+        this.headerContainerStyle = "background-color: lightblue;";
 
         /**
          * @property {string} footerContainerStyle
@@ -249,7 +249,7 @@ export default class CinciGrid {
          * @example
          * grid.footerContainerStyle = "background-color: #fff; border-top: 1px solid #ddd;";
          */
-        this.footerContainerStyle = "";
+        this.footerContainerStyle = "background-color: lightblue;";
 
         /**
          * @property {boolean} totalCountInfo
