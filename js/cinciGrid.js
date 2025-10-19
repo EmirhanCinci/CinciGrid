@@ -262,6 +262,50 @@ export default class CinciGrid {
          * grid.totalCountInfo = true; // Toplam kayıt bilgisi etkin
          */
         this.totalCountInfo = false;
+
+        /**
+         * @property {string|null} sortKey
+         * @description Hangi sütun üzerinde sıralama yapıldığını belirtir.  
+         * `null` değeri, sıralamanın devre dışı olduğunu gösterir.
+         *
+         * @default null
+         * @example
+         * grid.sortKey = "price"; // "price" sütununa göre sıralama yapar.
+         */
+        this.sortKey = null;
+
+        /**
+         * @property {"asc"|"desc"} sortOrder
+         * @description Geçerli sıralama yönünü belirtir.  
+         * "asc" → artan, "desc" → azalan sıralama.
+         *
+         * @default "asc"
+         * @example
+         * grid.sortOrder = "desc"; // Azalan sıralama uygular.
+         */
+        this.sortOrder = "asc";
+
+        /**
+         * @property {Object<string, Array<any>>} activeFilters
+         * @description Her sütun için aktif durumda olan filtre değerlerini tutar.  
+         * Anahtar sütun adıdır, değer o sütunda seçili filtrelerin listesidir.
+         *
+         * @default {}
+         * @example
+         * grid.activeFilters = { status: ["Aktif", "Pasif"] };
+         */
+        this.activeFilters = {};
+
+        /**
+         * @property {Object<string, string>} columnSearches
+         * @description Kolon bazlı arama ifadelerini saklar.  
+         * Anahtar sütun adıdır, değer arama kutusuna girilen metindir.
+         *
+         * @default {}
+         * @example
+         * grid.columnSearches = { name: "Ali", city: "Ankara" };
+         */
+        this.columnSearches = {};
     }
 
     /**
@@ -716,6 +760,261 @@ export default class CinciGrid {
     enableTotalCountInfoMode(enabled = true) {
         this.totalCountInfo = enabled;
         return this;
+    }
+
+    /**
+     * @private
+     * @method #getPagedData
+     * @description Filtrelenmiş, sıralanmış ve sayfalanmış veri setini döner.  
+     * Bu metod; global arama, kolon arama, filtreleme ve sıralama işlemlerini sırasıyla uygular.
+     *
+     * @returns {Array<Object>} Görüntülenecek veri dilimini döner.
+     */
+    #getPagedData() {
+        let filteredData = [...this.data];
+        filteredData = this.#applyGlobalSearch(filteredData);
+        filteredData = this.#applyColumnSearches(filteredData);
+        filteredData = this.#applyActiveFilters(filteredData);
+        filteredData = this.#applySorting(filteredData);
+        this.totalCount = filteredData.length;
+        return this.#applyPagination(filteredData);
+    }
+
+    /**
+     * @private
+     * @method #getCellSearchableText
+     * @description Belirtilen hücreden (satır ve sütun bazında) arama yapılabilir düz metin değeri döner.  
+     * Bu metot, hem global arama hem de sütun bazlı arama işlemlerinde kullanılır.
+     *
+     * @param {object} row - Tablo satırını temsil eden veri nesnesi.
+     * @param {string} key - Hücreye karşılık gelen sütun anahtarı.
+     * @returns {string} Aranabilir düz metin değeri. Hücre değeri yoksa boş string döner.
+     *
+     * @example
+     * const row = { name: "Ali", age: 25 };
+     * const text = this.#getCellSearchableText(row, "name");
+     * console.log(text); // "Ali"
+     *
+     * @details
+     * - Eğer sütun `searchSource` fonksiyonu tanımlandıysa, onun döndürdüğü değer öncelikli olarak kullanılır.
+     * - Eğer sütun `formatter` fonksiyonuna sahipse, HTML içeriği düz metne çevrilir ve o şekilde aranır.
+     * - Yukarıdakiler tanımlı değilse doğrudan `row[key]` değeri kullanılır.
+     * - `null` veya `undefined` değerler otomatik olarak boş stringe çevrilir.
+     */
+    #getCellSearchableText(row, key) {
+        const col = this.columnSettings[key];
+        if (!col) return "";
+        if (typeof col.searchSource === "function") {
+            const v = col.searchSource(row);
+            return v == null ? "" : String(v);
+        }
+        if (typeof col.formatter === "function") {
+            const html = col.formatter(row);
+            const txt = $("<div>").html(html == null ? "" : String(html)).text();
+            return txt;
+        }
+        const v = row[key];
+        return v == null ? "" : String(v);
+    }
+
+    /**
+     * @private
+     * @method #applyGlobalSearch
+     * @description Global arama alanındaki ifadeye göre tüm sütunlarda arama yapar.
+     * @param {Array<Object>} data - Orijinal veri dizisi
+     * @returns {Array<Object>} Filtrelenmiş veri dizisi
+     */
+    #applyGlobalSearch(data) {
+        if (!this.globalSearch || !this.globalSearch.trim()) return data;
+        const term = this.globalSearch.toLowerCase();
+
+        return data.filter(row =>
+            Object.keys(this.columnSettings).some(key => {
+                const col = this.columnSettings[key];
+                if (!col.visible) return false;
+                const text = this.#getCellSearchableText(row, key).toLowerCase();
+                return text.includes(term);
+            })
+        );
+    }
+
+    /**
+     * @private
+     * @method #applyColumnSearches
+     * @description Kolon bazlı aramaları uygular.
+     * @param {Array<Object>} data - Veri dizisi
+     * @returns {Array<Object>} Filtrelenmiş veri dizisi
+     */
+    #applyColumnSearches(data) {
+        if (!this.columnSearches || Object.keys(this.columnSearches).length === 0) return data;
+
+        return data.filter(row =>
+            Object.entries(this.columnSearches).every(([key, term]) => {
+                if (!term) return true;
+                const haystack = this.#getCellSearchableText(row, key).toLowerCase();
+                return haystack.includes(String(term).toLowerCase());
+            })
+        );
+    }
+
+    /**
+     * @private
+     * @method #applyActiveFilters
+     * @description Kullanıcı tarafından seçilen filtreleri uygular.
+     * @param {Array<Object>} data - Veri dizisi
+     * @returns {Array<Object>} Filtrelenmiş veri dizisi
+     */
+    #applyActiveFilters(data) {
+        if (!this.activeFilters || Object.keys(this.activeFilters).length === 0) return data;
+
+        return data.filter(row =>
+            Object.entries(this.activeFilters).every(([key, values]) => {
+                if (!values || values.length === 0) return true;
+                const col = this.columnSettings[key];
+                const cellValue = typeof col.filterSource === "function" ? col.filterSource(row) : row[key];
+                return values.includes(cellValue);
+            })
+        );
+    }
+
+    /**
+     * @private
+     * @method #applySorting
+     * @description Aktif sıralama (sortKey + sortOrder) bilgisine göre veriyi sıralar.
+     * @param {Array<Object>} data - Filtrelenmiş veri dizisi
+     * @returns {Array<Object>} Sıralanmış veri dizisi
+     */
+    #applySorting(data) {
+        if (!this.sortKey) return data;
+        const key = this.sortKey;
+        const order = this.sortOrder;
+
+        return [...data].sort((a, b) => {
+            const valA = a[key];
+            const valB = b[key];
+            if (valA == null) return 1;
+            if (valB == null) return -1;
+            if (valA < valB) return order === "asc" ? -1 : 1;
+            if (valA > valB) return order === "asc" ? 1 : -1;
+            return 0;
+        });
+    }
+
+    /**
+     * @private
+     * @method #applyPagination
+     * @description Sayfalama açık ise sadece ilgili sayfa dilimini döner.
+     * @param {Array<Object>} data - Sıralanmış veri dizisi
+     * @returns {Array<Object>} Görüntülenecek veri alt kümesi
+     */
+    #applyPagination(data) {
+        if (!this.usePagination) return data;
+        const start = (this.index - 1) * this.pageSize;
+        const end = this.index * this.pageSize;
+        return data.slice(start, end);
+    }
+
+    /**
+     * @private
+     * @method #buildFilterDropdown
+     * @description Belirli bir sütun için dinamik filtre menüsü oluşturur.  
+     * Kullanıcı sütun ikonuna (⛃) tıkladığında çağrılır ve filtre seçeneklerini listeler.
+     *
+     * @param {string} key - Filtre uygulanacak sütunun anahtarı.
+     * @param {object} col - Sütun yapılandırma nesnesi (`columnSettings[key]`).
+     * @returns {jQuery} jQuery ile oluşturulmuş filtre dropdown öğesi.
+     *
+     * @example
+     * const dropdown = this.#buildFilterDropdown("status", this.columnSettings["status"]);
+     * $("body").append(dropdown);
+     *
+     * @details
+     * - Filtre menüsü sütun değerlerinden otomatik olarak oluşturulur.
+     * - Eğer `col.filterSource` bir fonksiyon ise, her satırdan değer bu fonksiyonla alınır.
+     * - Eğer `col.filterOptions` tanımlıysa, doğrudan o dizi kullanılır.
+     * - “Tümünü Seç” seçeneği otomatik olarak eklenir.
+     * - Arama kutusu, seçenekler arasında metin bazlı filtreleme yapar.
+     * - Filtre değişiklikleri sonrası tablo `render()` ile yeniden oluşturulur.
+     */
+    #buildFilterDropdown(key, col) {
+        const dropdown = $(`
+            <div class="filter-dropdown shadow p-2 bg-white border rounded"
+                style="position:absolute; z-index:9999; min-width:200px; max-height:300px; overflow:auto;">
+            </div>
+        `);
+
+        const allValues =
+            col.filterOptions && col.filterOptions.length
+                ? col.filterOptions
+                : [...new Set(
+                    this.data.map(row => {
+                        if (typeof col.filterSource === "function") return col.filterSource(row);
+                        return row[key];
+                    }).filter(Boolean)
+                )];
+
+        const selectedValues = this.activeFilters[key] || [];
+        const selectAllId = `select_all_${key}`;
+
+        dropdown.append(`<div class="mb-2"><input type="text" class="form-control form-control-sm filter-search" placeholder="Ara..."></div>`);
+
+        dropdown.append(`
+            <div class="form-check mb-1">
+                <input type="checkbox" id="${selectAllId}" class="form-check-input"
+                    ${selectedValues.length === allValues.length && allValues.length > 0 ? "checked" : ""}>
+                <label for="${selectAllId}" class="form-check-label"><strong>Tümünü Seç</strong></label>
+            </div>
+        `);
+
+        allValues.forEach(value => {
+            const id = `filter_${key}_${value}`;
+            const checked = selectedValues.includes(value) ? "checked" : "";
+            dropdown.append(`
+                <div class="form-check">
+                    <input type="checkbox" id="${id}" class="form-check-input" value="${value}" ${checked}>
+                    <label for="${id}" class="form-check-label">${value}</label>
+                </div>
+            `);
+        });
+
+        dropdown.find(".filter-search").on("input", (e) => {
+            const term = e.target.value.toLowerCase();
+            dropdown.find(".form-check").not(":first").each(function() {
+                const label = $(this).text().toLowerCase();
+                $(this).toggle(label.includes(term));
+            });
+        });
+
+        dropdown.find(`#${selectAllId}`).on("change", (e) => {
+            if (e.target.checked) {
+                this.activeFilters[key] = [...allValues];
+            } else {
+                this.activeFilters[key] = [];
+            }
+            this.index = 1;
+            this.render();
+            dropdown.remove();
+        });
+
+        dropdown.find("input[type=checkbox]").not(`#${selectAllId}`).on("change", (e) => {
+            const val = $(e.target).val();
+            if (!this.activeFilters[key]) this.activeFilters[key] = [];
+
+            if (e.target.checked) {
+                if (!this.activeFilters[key].includes(val)) this.activeFilters[key].push(val);
+            } else {
+                this.activeFilters[key] = this.activeFilters[key].filter(v => v !== val);
+            }
+
+            const total = allValues.length;
+            const selected = this.activeFilters[key].length;
+            dropdown.find(`#${selectAllId}`).prop("checked", selected === total);
+
+            this.index = 1;
+            this.render();
+        });
+
+        return dropdown;
     }
 
     /**
