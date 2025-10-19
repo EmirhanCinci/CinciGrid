@@ -153,6 +153,24 @@ export default class CinciGrid {
         this.pageSize = 10;
 
         /**
+         * Son render işleminde görüntülenen satırların referanslarını saklar.
+         * "Tümünü Seç" işlemleri yalnızca bu görünür satırlar üzerinde çalışacaktır.
+         *
+         * @type {Array<Object>}
+         * @private
+         */
+        this._currentViewData = [];
+
+        /**
+         * Son render işleminde görüntülenen satırların, orijinal veri dizisindeki indeksleri.
+         * Satır seçimi durumunu güncellerken filtrelenmiş verilerle senkron kalmayı sağlar.
+         *
+         * @type {Array<number>}
+         * @private
+         */
+        this._currentViewIndices = [];
+
+        /**
          * Satır numaralarının tabloda gösterilip gösterilmeyeceğini belirten bayrak.
          * false olduğunda tablo satırlarının başında sıra numarası görünmez.
          * 
@@ -743,8 +761,22 @@ export default class CinciGrid {
      * this.#updateSelectAllState();
      */
     #updateSelectAllState() {
-        const allSelected = this.data.length > 0 && this.selectedRows.size === this.data.length;
-        this.selector.find(".select-all-checkbox").prop("checked", allSelected);
+        const checkbox = this.selector.find(".select-all-checkbox");
+        if (!checkbox.length) return;
+
+        const visibleIndices = this._currentViewIndices || [];
+        if (visibleIndices.length === 0) {
+            checkbox.prop("checked", false);
+            checkbox.prop("indeterminate", false);
+            return;
+        }
+
+        const selectedCount = visibleIndices.filter(index => this.selectedRows.has(index)).length;
+        const allSelected = selectedCount === visibleIndices.length;
+        const partiallySelected = selectedCount > 0 && !allSelected;
+
+        checkbox.prop("checked", allSelected);
+        checkbox.prop("indeterminate", partiallySelected);
     }
 
     /**
@@ -1191,12 +1223,12 @@ export default class CinciGrid {
      *
      * @returns {jQuery} Tamamlanmış `<thead>` elementi.
      */
-    #buildHeader() {
+    #buildHeader(currentViewIndices = []) {
         const thead = $(`<thead></thead>`);
         const theadRow = $(`<tr></tr>`);
 
         if (this.enableSelection) {
-            const selectAllTh = this.#buildHeaderSelection();
+            const selectAllTh = this.#buildHeaderSelection(currentViewIndices);
             theadRow.append(selectAllTh);
         }
 
@@ -1228,20 +1260,29 @@ export default class CinciGrid {
      *
      * @returns {jQuery} Seçim kutusunu içeren `<th>` elementi.
      */
-    #buildHeaderSelection() {
-        const selectAllChecked = this.selectedRows.size > 0 && this.selectedRows.size === this.data.length;
+    #buildHeaderSelection(currentViewIndices = []) {
+        const selectedCount = currentViewIndices.filter(index => this.selectedRows.has(index)).length;
+        const allSelected = currentViewIndices.length > 0 && selectedCount === currentViewIndices.length;
+        const partiallySelected = selectedCount > 0 && !allSelected;
         const selectAllTh = $(`
             <th class="text-center" style="width:40px;">
-                <input type="checkbox" class="select-all-checkbox" ${selectAllChecked ? "checked" : ""}>
+                <input type="checkbox" class="select-all-checkbox">
             </th>
         `);
-        selectAllTh.find("input").on("change", (e) => {
+        const checkbox = selectAllTh.find("input");
+        checkbox.prop("checked", allSelected);
+        checkbox.prop("indeterminate", partiallySelected);
+        checkbox.prop("disabled", currentViewIndices.length === 0);
+        checkbox.on("change", (e) => {
             const checked = e.target.checked;
+            const visibleIndices = Array.isArray(this._currentViewIndices) ? [...this._currentViewIndices] : [];
+
             if (checked) {
-                this.data.forEach((_, i) => this.selectedRows.add(i));
+                visibleIndices.forEach(index => this.selectedRows.add(index));
             } else {
-                this.selectedRows.clear();
+                visibleIndices.forEach(index => this.selectedRows.delete(index));
             }
+
             this.render();
         });
         return selectAllTh;
@@ -1420,11 +1461,16 @@ export default class CinciGrid {
      *
      * @returns {jQuery} Tamamlanmış `<tbody>` elementi.
      */
-    #buildBody() {
+    #buildBody(pageData = null) {
         const tbody = $(`<tbody></tbody>`);
-        const pageData = this.#getPagedData();
+        const dataForRender = Array.isArray(pageData) ? pageData : this.#getPagedData();
 
-        if (pageData.length === 0) {
+        if (!Array.isArray(pageData)) {
+            this._currentViewData = dataForRender;
+            this._currentViewIndices = dataForRender.map(row => this.data.indexOf(row)).filter(index => index !== -1);
+        }
+
+        if (dataForRender.length === 0) {
             const totalColumns = this._lastColumnCount || Object.values(this.columnSettings).filter(c => c.visible !== false).length || 1;
             const tr = $('<tr></tr>');
             const td = $(`<td colspan="${totalColumns}" class="text-center">İçerik bulunamadı</td>`);
@@ -1433,7 +1479,7 @@ export default class CinciGrid {
             return tbody;
         }
 
-        pageData.forEach(row => {
+        dataForRender.forEach(row => {
             const tr = $(`<tr></tr>`);
 
             if (this.enableSelection) {
@@ -1442,7 +1488,7 @@ export default class CinciGrid {
             }
 
             if (this.showRowNumbers) {
-                const rowNumberTd = this.#buildBodyRowNumbers(row, pageData);
+                const rowNumberTd = this.#buildBodyRowNumbers(row, dataForRender);
                 tr.append(rowNumberTd);
             }
 
@@ -1490,6 +1536,7 @@ export default class CinciGrid {
         `);
 
         checkboxTd.find("input").on("change", (e) => {
+            if (globalIndex === -1) return;
             if (e.target.checked) this.selectedRows.add(globalIndex);
             else this.selectedRows.delete(globalIndex);
             this.#updateSelectAllState();
@@ -1676,9 +1723,13 @@ export default class CinciGrid {
      * @returns {CinciGrid} Mevcut sınıf örneğini döner (method chaining için).
      */
     render() {
+        const pageData = this.#getPagedData();
+        this._currentViewData = pageData;
+        this._currentViewIndices = pageData.map(row => this.data.indexOf(row)).filter(index => index !== -1);
+        
         const table = $(`<table id="${this.tableId || ''}" class="custom-table m-0 ${this.tableClasses || ''}"></table>`);
-        table.append(this.#buildHeader());
-        table.append(this.#buildBody());
+        table.append(this.#buildHeader(this._currentViewIndices));
+        table.append(this.#buildBody(pageData));
         const footer = this.#buildFooter();
         if (footer) table.append(footer);
         this.selector.empty();
