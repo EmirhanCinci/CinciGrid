@@ -672,4 +672,20 @@ export default class CinciGrid {
         this.footerContainerStyle = style.trim();
         return this;
     }
+
+    /**
+     * @private
+     * @method #updateSelectAllState
+     * @description "Tümünü Seç" kutusunun durumunu (checked / unchecked) günceller.  
+     * Eğer tabloda görüntülenen tüm satırlar seçilmişse checkbox otomatik olarak işaretlenir,  
+     * aksi durumda kaldırılır. Bu metot her satır seçimi veya kaldırma işleminden sonra çağrılır.
+     *
+     * @example
+     * Kullanıcı satır seçimlerini değiştirdiğinde otomatik olarak çağrılır.
+     * this.#updateSelectAllState();
+     */
+    #updateSelectAllState() {
+        const allSelected = this.data.length > 0 && this.selectedRows.size === this.data.length;
+        this.selector.find(".select-all-checkbox").prop("checked", allSelected);
+    }
 }
