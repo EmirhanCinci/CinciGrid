@@ -1242,7 +1242,7 @@ export default class CinciGrid {
             iconGroup.append(filterIcon);
         }
         if (col.searchable === true) {
-            const searchIcon = this.#builSearchIcon(key, col);
+            const searchIcon = this.#builSearchIcon(key, col, th, inner);
             iconGroup.append(searchIcon);
         }
         th.append(inner);
@@ -1324,7 +1324,7 @@ export default class CinciGrid {
      * @param {object} col - Sütun yapılandırması.
      * @returns {jQuery} Arama ikonunu içeren `<span>` elementi.
      */
-    #builSearchIcon(key, col) {
+    #builSearchIcon(key, col, th, inner) {
         const hasSearch = this.columnSearches && this.columnSearches[key];
         const searchIcon = $(`<span class="search-icon" style="cursor:pointer; opacity:${hasSearch ? 1 : 0.6}; color:${hasSearch ? '#007bff' : 'inherit'};">🔍</span>`);
         searchIcon.on("click", (e) => {
