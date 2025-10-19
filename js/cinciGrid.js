@@ -702,20 +702,138 @@ export default class CinciGrid {
     }
 
     /**
- * @method enableTotalCountInfoMode
- * @description Toplam kayıt ve sayfalama bilgisini gösterme özelliğini aktif eder veya devre dışı bırakır.  
- * Bu bilgi, sayfalama kontrolünün yanında veya altında yer alabilir.
- *
- * @param {boolean} [enabled=true] - Özelliği etkinleştirir (`true`) veya devre dışı bırakır (`false`).
- * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
- *
- * @example
- * grid.enableTotalCountInfoMode(true);  // Bilgilendirme alanını açar
- * grid.enableTotalCountInfoMode(false); // Bilgilendirme alanını kapatır
- */
-enableTotalCountInfoMode(enabled = true) {
-    this.totalCountInfo = enabled;
-    return this;
-}
+     * @method enableTotalCountInfoMode
+     * @description Toplam kayıt ve sayfalama bilgisini gösterme özelliğini aktif eder veya devre dışı bırakır.  
+     * Bu bilgi, sayfalama kontrolünün yanında veya altında yer alabilir.
+     *
+     * @param {boolean} [enabled=true] - Özelliği etkinleştirir (`true`) veya devre dışı bırakır (`false`).
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.enableTotalCountInfoMode(true);  // Bilgilendirme alanını açar
+     * grid.enableTotalCountInfoMode(false); // Bilgilendirme alanını kapatır
+     */
+    enableTotalCountInfoMode(enabled = true) {
+        this.totalCountInfo = enabled;
+        return this;
+    }
 
+    /**
+     * @private
+     * @method #buildFooterContainer
+     * @description Tablonun alt kısmında (footer) sayfalama ve kayıt bilgisi alanını oluşturur.  
+     * Eğer `usePagination` veya `totalCountInfo` özelliklerinden en az biri etkinse çalışır.  
+     * Geliştirici isterse footer kısmını tamamen devre dışı bırakabilir.
+     *
+     * @returns {jQuery|null} jQuery ile oluşturulmuş footer kapsayıcısı döner.  
+     * Her iki özellik de pasifse `null` döner.
+     *
+     * @example
+     * // render() içinde otomatik olarak çağrılır:
+     * const footer = this.#buildFooterContainer();
+     * if (footer) this.selector.append(footer);
+     *
+     * @details
+     * - Kapsayıcıda hem bilgi metni (`Toplam X kayıttan...`) hem de sayfa geçiş butonları bulunur.
+     * - Geliştirici, dış görünümü `footerContainerStyle` özelliğiyle özelleştirebilir.
+     * - Yalnızca `totalCountInfo` aktifse yalnız bilgi metni görüntülenir.
+     * - Yalnızca `usePagination` aktifse yalnız sayfalama butonları görüntülenir.
+     */
+    #buildFooterContainer() {
+        if (!this.usePagination && !this.totalCountInfo) return null;
+
+        const footerContainer = $(
+            `<div class="footer-container d-flex justify-content-between align-items-center py-3 px-2"
+                style="${this.foooterContainerStyle}">
+            </div>`
+        );
+
+        const infoDiv = $('<div class="pagination-info small text-muted"></div>');
+        const paginationDiv = $('<div class="pagination-container d-flex justify-content-end flex-grow-1"></div>');
+
+        if (this.totalCountInfo) {
+            const infoText = this.#builInfo();
+            infoDiv.text(infoText);
+        }
+        footerContainer.append(infoDiv);
+
+        if (this.usePagination) {
+            const ul = this.#buildPagination();
+            paginationDiv.append(ul);
+        }
+        footerContainer.append(paginationDiv);
+
+        return footerContainer;
+    }
+
+    /**
+     * @private
+     * @method #builInfo
+     * @description Aktif sayfa, toplam kayıt sayısı ve gösterilen aralığı içeren bilgi metnini üretir.  
+     * Bilgi `Toplam X kayıttan Y tanesi gösteriliyor (Sayfa A/B)` formatında döner.
+     *
+     * @returns {string} Bilgi metni
+     *
+     * @example
+     * const text = this.#builInfo();
+     * console.log(text); // "Toplam 120 kayıttan 10 tanesi gösteriliyor (Sayfa 2/12)"
+     */
+    #builInfo() {
+        const totalPages = this.#getTotalPages();
+        const total = this.totalCount;
+        const startIndex = (this.index - 1) * this.pageSize + 1;
+        const endIndex = Math.min(startIndex + this.pageSize - 1, total);
+        const infoText = `Toplam ${total} kayıttan ${endIndex - startIndex + 1} tanesi gösteriliyor (Sayfa ${this.index}/${totalPages}).`;
+        return infoText;
+    }
+
+    /**
+     * @private
+     * @method #buildPagination
+     * @description Sayfa geçiş butonlarını oluşturur.  
+     * "İlk", "Önceki", "Sonraki" ve "Son" butonlarını içerir; ayrıca aktif sayfa vurgulanır.
+     *
+     * @returns {jQuery} jQuery ile oluşturulmuş `<ul>` elementini döner.
+     *
+     * @example
+     * const pagination = this.#buildPagination();
+     * $('.pagination-container').append(pagination);
+     *
+     * @details
+     * - Her butonun tıklama olayı `render()` metodunu tetikler.
+     * - Dinamik olarak aktif sayfa (`index`) ve toplam sayfa (`totalPages`) bilgisine göre güncellenir.
+     * - Butonlar `page-item` ve `page-link` sınıflarıyla Bootstrap uyumludur.
+     */
+    #buildPagination() {
+        const totalPages = this.#getTotalPages();
+        const ul = $('<ul class="pagination mb-0"></ul>');
+
+        const makeButton = (label, disabled, active, action) => {
+            const li = $(`<li class="page-item ${disabled ? "disabled" : ""} ${active ? "active" : ""}"></li>`);
+            const btn = $(`<button class="page-link">${label}</button>`);
+            if (!disabled) {
+                btn.on("click", () => {
+                    action();
+                    this.render();
+                });
+            }
+            li.append(btn);
+            return li;
+        };
+
+        const current = this.index;
+        ul.append(makeButton("« İlk", current === 1, false, () => (this.index = 1)));
+        ul.append(makeButton("‹ Önceki", current === 1, false, () => (this.index -= 1)));
+
+        const start = Math.max(1, current - 1);
+        const end = Math.min(totalPages, start + 2);
+        for (let i = start; i <= end; i++) {
+            ul.append(makeButton(i, false, i === current, () => (this.index = i)));
+        }
+
+        ul.append(makeButton("Sonraki ›", current === totalPages, false, () => (this.index += 1)));
+        ul.append(makeButton("Son »", current === totalPages, false, () => (this.index = totalPages)));
+
+        return ul;
+    }
 }
