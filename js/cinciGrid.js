@@ -616,6 +616,7 @@ export default class CinciGrid {
      * @param {Function} [settings.formatter] - Hücre içeriğini özel biçimlendirmeyle döndürmek için fonksiyon.
      * @param {Function|string} [settings.filterSource] - Filtre seçeneklerini veya hücrede kullanılacak değeri belirleyen kaynak.
      * @param {Function} [settings.searchSource] - Arama sırasında kullanılacak alternatif veri kaynağını döndürür.
+     * @param {Function|string} [settings.sortSource] - Sıralamada kullanılacak alternatif veri kaynağını belirler.
      * @param {Function|string} [settings.contentStyle] - Hücreye özel CSS stilini belirleyen string veya fonksiyon.
      * @param {Function|string} [settings.cellClass] - Hücreye özel CSS sınıfını belirleyen string veya fonksiyon.
      * @param {string} [settings.aggregateLabel] - Footer’da gösterilecek toplama etiketi (örneğin “Toplam”).
@@ -643,6 +644,7 @@ export default class CinciGrid {
             contentAlign: typeof settings.contentAlign === "string" ? settings.contentAlign : "text-start",
             contentStyle: typeof settings.contentStyle === "function" ? settings.contentStyle : (typeof settings.contentStyle === "string" ? settings.contentStyle : ""),
             sortable: typeof settings.sortable === "boolean" ? settings.sortable : false,
+            sortSource: typeof settings.sortSource === "function" ? settings.sortSource : (typeof settings.sortSource === "string" ? settings.sortSource : null),
             visible: typeof settings.visible === "boolean" ? settings.visible : true,
             cellClass: typeof settings.cellClass === "function" ? settings.cellClass : (typeof settings.cellClass === "string" ? settings.cellClass : ""),
             formatter: typeof settings.formatter === "function" ? settings.formatter : null,
@@ -890,14 +892,59 @@ export default class CinciGrid {
         const order = this.sortOrder;
 
         return [...data].sort((a, b) => {
-            const valA = a[key];
-            const valB = b[key];
+            const valA = this.#getCellSortableValue(a, key);
+            const valB = this.#getCellSortableValue(b, key);
             if (valA == null) return 1;
             if (valB == null) return -1;
             if (valA < valB) return order === "asc" ? -1 : 1;
             if (valA > valB) return order === "asc" ? 1 : -1;
             return 0;
         });
+    }
+
+    /**
+     * @private
+     * @method #getCellSortableValue
+     * @description Sıralama işlemi için sütun değerini döner.
+     * - Eğer `sortSource` fonksiyonu tanımlıysa öncelikli olarak o kullanılır.
+     * - `sortSource` string ise satırdaki ilgili property değeri alınır.
+     * - Aksi durumda `searchSource`, `filterSource` veya `formatter` sonuçları kullanılır.
+     * - Hiçbiri tanımlı değilse doğrudan `row[key]` değeri döner.
+     *
+     * @param {object} row - Tablo satırını temsil eden veri nesnesi.
+     * @param {string} key - Hücreye karşılık gelen sütun anahtarı.
+     * @returns {*} Sıralamada kullanılacak değer.
+     */
+    #getCellSortableValue(row, key) {
+        const col = this.columnSettings[key];
+        if (!col) return row[key];
+
+        if (typeof col.sortSource === "function") {
+            return col.sortSource(row);
+        }
+
+        if (typeof col.sortSource === "string" && col.sortSource in row) {
+            return row[col.sortSource];
+        }
+
+        if (typeof col.searchSource === "function") {
+            return col.searchSource(row);
+        }
+
+        if (typeof col.filterSource === "function") {
+            return col.filterSource(row);
+        }
+
+        if (typeof col.filterSource === "string" && col.filterSource in row) {
+            return row[col.filterSource];
+        }
+
+        if (typeof col.formatter === "function") {
+            const html = col.formatter(row);
+            return $("<div>").html(html == null ? "" : String(html)).text();
+        }
+
+        return row[key];
     }
 
     /**
