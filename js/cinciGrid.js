@@ -178,6 +178,32 @@ export default class CinciGrid {
          * @default new Set()
          */
         this.selectedRows = new Set();
+
+        /**
+         * @property {boolean} enableGlobalSearchBar
+         * @description Tablonun üst kısmında genel arama (global search) alanının gösterilip gösterilmeyeceğini belirten bayrak.
+         * `false` olduğunda arama alanı gizlenir.
+         * 
+         * @default false
+         */
+        this.enableGlobalSearchBar = false;
+
+        /**
+         * @property {string} globalSearch
+         * @description Genel arama kutusuna yazılan son arama terimini saklar.
+         * Bu değer, tabloyu filtrelerken kullanılır.
+         * 
+         * @default ""
+         */
+        this.globalSearch = "";
+
+        /**
+         * @property {string} globalSearchPlaceholder
+         * @description Genel arama kutusunda görünecek placeholder metnini belirler.
+         * 
+         * @default "Tabloda ara..."
+         */
+        this.globalSearchPlaceholder = "Tabloda ara...";
     }
     /**
      * @private
@@ -438,4 +464,37 @@ export default class CinciGrid {
     getSelectedRows() {
         return Array.from(this.selectedRows).map(i => this.data[i]);
     }
+
+
+    /**
+ * @method enableGlobalSearch
+ * @description Genel arama (global search) özelliğini aktif veya pasif hale getirir.
+ *
+ * @param {boolean} [enabled=true] - Arama kutusunu etkinleştirir veya devre dışı bırakır.
+ * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+ *
+ * @example
+ * grid.enableGlobalSearch(true);  // Arama kutusunu etkinleştir
+ * grid.enableGlobalSearch(false); // Arama kutusunu gizle
+ */
+enableGlobalSearch(enabled = true) {
+    this.enableGlobalSearchBar = enabled;
+    return this;
+}
+
+/**
+ * @method setGlobalSearchPlaceholder
+ * @description Genel arama kutusunun placeholder metnini değiştirir.
+ *
+ * @param {string} text - Arama kutusunda gösterilecek placeholder metni.
+ * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+ *
+ * @example
+ * grid.setGlobalSearchPlaceholder("Kayıt ara...");
+ */
+setGlobalSearchPlaceholder(text) {
+    this.globalSearchPlaceholder = text;
+    return this;
+}
+
 }
