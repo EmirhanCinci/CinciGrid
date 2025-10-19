@@ -250,6 +250,18 @@ export default class CinciGrid {
          * grid.footerContainerStyle = "background-color: #fff; border-top: 1px solid #ddd;";
          */
         this.footerContainerStyle = "";
+
+        /**
+         * @property {boolean} totalCountInfo
+         * @description Toplam kayıt bilgisinin tablo alt kısmında gösterilip gösterilmeyeceğini belirler.  
+         * `true` olduğunda, sayfalama alanının sol tarafında "Toplam X kayıttan Y tanesi gösteriliyor" gibi bir bilgi görünür.
+         *
+         * @default false
+         *
+         * @example
+         * grid.totalCountInfo = true; // Toplam kayıt bilgisi etkin
+         */
+        this.totalCountInfo = false;
     }
 
     /**
@@ -688,4 +700,22 @@ export default class CinciGrid {
         const allSelected = this.data.length > 0 && this.selectedRows.size === this.data.length;
         this.selector.find(".select-all-checkbox").prop("checked", allSelected);
     }
+
+    /**
+ * @method enableTotalCountInfoMode
+ * @description Toplam kayıt ve sayfalama bilgisini gösterme özelliğini aktif eder veya devre dışı bırakır.  
+ * Bu bilgi, sayfalama kontrolünün yanında veya altında yer alabilir.
+ *
+ * @param {boolean} [enabled=true] - Özelliği etkinleştirir (`true`) veya devre dışı bırakır (`false`).
+ * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+ *
+ * @example
+ * grid.enableTotalCountInfoMode(true);  // Bilgilendirme alanını açar
+ * grid.enableTotalCountInfoMode(false); // Bilgilendirme alanını kapatır
+ */
+enableTotalCountInfoMode(enabled = true) {
+    this.totalCountInfo = enabled;
+    return this;
+}
+
 }
