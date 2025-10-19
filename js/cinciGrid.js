@@ -217,7 +217,21 @@ export default class CinciGrid {
          * };
          */
         this.columnSettings = {};
+
+        /**
+         * @property {Array<Object>} actionColumns
+         * @description Her satırda görünecek olan işlem (aksiyon) butonlarını tutar.  
+         * Bu butonlar genellikle "Düzenle", "Sil", "Detay" gibi eylemler için kullanılır.
+         *
+         * @example
+         * grid.actionColumns = [
+         *   { label: "Sil", icon: "fa fa-trash", className: "btn btn-danger", onClick: (row) => deleteRow(row.id) },
+         *   { label: "Düzenle", icon: "fa fa-edit", className: "btn btn-warning", onClick: (row) => editRow(row.id) }
+         * ];
+         */
+        this.actionColumns = [];
     }
+
     /**
      * @private
      * @method #updateCount
@@ -564,6 +578,42 @@ export default class CinciGrid {
             searchSource: typeof settings.searchSource === "function" ? settings.searchSource : null,
         };
         this.columnSettings[key] = colSettings;
+        return this;
+    }
+
+    /**
+     * @method addActionColumn
+     * @description Tablo satırlarına özel işlem butonları ekler.  
+     * Her buton için bir etiket, isteğe bağlı simge ve tıklama olayı tanımlanabilir.
+     *
+     * @param {Object} action - Eklenecek butonun yapılandırma nesnesi.
+     * @param {string} action.label - Buton üzerinde veya tooltip'te görüntülenecek etiket.
+     * @param {string} [action.icon=""] - Font Awesome veya benzeri ikon sınıfı (örneğin `"fa fa-trash"`).
+     * @param {string} [action.class="btn btn-sm btn-secondary"] - Butonun CSS sınıfı.
+     * @param {Function} [action.onClick] - Butona tıklandığında çalışacak fonksiyon.  
+     * Parametre olarak ilgili satırın verisi (`row`) gönderilir.
+     *
+     * @returns {CinciGrid} Mevcut tablo örneğini döner (method chaining destekler).
+     *
+     * @example
+     * grid.addActionColumn({
+     *   label: "Sil",
+     *   icon: "fa fa-trash",
+     *   class: "btn btn-sm btn-danger",
+     *   onClick: (row) => alert(`${row.name} silinecek!`)
+     * });
+     */
+    addActionColumn(action) {
+        if (typeof action !== "object" || !action.label)
+            throw new Error("CinciGrid: action parametresi geçerli bir nesne olmalı.");
+        const { label, icon = "", class: className = "btn btn-sm btn-secondary", onClick } = action;
+        this.actionColumns.push({ 
+            label, 
+            icon, 
+            className, 
+            onClick: typeof 
+            onClick === "function" ? onClick : null 
+        });
         return this;
     }
 }
