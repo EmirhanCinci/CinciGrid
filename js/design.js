@@ -10,6 +10,11 @@ const btnChangeTableHeaderContainerStyle = $('#btn-change-table-header-container
 const btnChangeTableHeaderContainerStyleAdd = $('#btn-change-table-header-container-style-add');
 const btnChangeTableHeaderContainerStyleRemove = $('#btn-change-table-header-container-style-remove');
 const btnChangeTableFooterContainerStyle = $('#btn-change-table-footer-container-style');
+const btnChangeTableFooterContainerStyleAdd = $('#btn-change-table-footer-container-style-add');
+const btnChangeTableFooterContainerStyleRemove = $('#btn-change-table-footer-container-style-remove');
+const btnChangeTableGlobalSearchClose = $('#btn-change-table-global-search-close');
+const btnChangeTableGlobalSearchOpen = $('#btn-change-table-global-search-open');
+const btnChangeTableGlobalSearchPlaceHoldder = $('#btn-change-table-global-search-placeholder');
 
 // Datas
 let users = [
@@ -53,6 +58,21 @@ $(document).ready(function() {
 
     // btn-change-table-header-container-style-remove button click event
     btnChangeTableHeaderContainerStyleRemove.on('click', () => userTableElement.removeHeaderContainerStyle("background-color: blue;"));
+
+    // btn-change-table-footer-container-style-add button click event
+    btnChangeTableFooterContainerStyleAdd.on('click', () => userTableElement.addFooterContainerStyle("background-color: lightblue;"));
+
+    // btn-change-table-footer-container-style-remove button click event
+    btnChangeTableFooterContainerStyleRemove.on('click', () => userTableElement.removeFooterContainerStyle("background-color: red;"));
+
+    // btn-change-table-global-search-close button event click
+    btnChangeTableGlobalSearchClose.on('click', () => userTableElement.enableGlobalSearch(false));
+
+    // btn-change-table-global-search-open button event click
+    btnChangeTableGlobalSearchOpen.on('click', () => userTableElement.enableGlobalSearch(true));
+
+    // btn-change-table-global-search-placeholder button event click
+    btnChangeTableGlobalSearchPlaceHoldder.on('click', () => userTableElement.setGlobalSearchPlaceholder("Değiştirildi..."));
 
     // Cinci Grid
     const userTableElement = new CustomTable($('#userTableElement'));

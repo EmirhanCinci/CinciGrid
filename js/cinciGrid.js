@@ -7,7 +7,7 @@
  * - Kolon bazlı arama ve toplama işlemleri
  * - Geliştirici dostu API tasarımı
  * 
- * @author  CİNCİ
+ * @author  Emirhan CİNCİ
  * @version 1.0.0
  * @license MIT
  */
@@ -604,6 +604,37 @@ export default class CinciGrid {
      */
     enableGlobalSearch(enabled = true) {
         this.enableGlobalSearchBar = enabled;
+        if (this.tableElement) {
+            const headerRight = this.selector.find(".table-header-right");
+
+            if (enabled) {
+                if (!headerRight.find(".global-search-input").length) {
+                    const searchInput = this.#createGlobalSearchInput();
+                    const resetBtn = headerRight.find(".reset-table-btn").first();
+                    if (resetBtn.length) {
+                        searchInput.insertBefore(resetBtn);
+                    } else {
+                        headerRight.append(searchInput);
+                    }
+                }
+            } else {
+                headerRight.find(".global-search-input").remove();
+
+                if (this.globalSearch && this.globalSearch.trim() !== "") {
+                    this.globalSearch = "";
+                    this.index = 1;
+                    return this.render();
+                }
+
+                const resetBtn = headerRight.find(".reset-table-btn").first();
+                if (resetBtn.length) {
+                    const isDefaultState = !this.globalSearch && Object.keys(this.activeFilters).length === 0 &&
+                        Object.keys(this.columnSearches).length === 0 && !this.sortKey && this.sortOrder === "asc" &&
+                        this.index === 1;
+                    resetBtn.prop("disabled", isDefaultState);
+                }
+            }
+        }
         return this;
     }
 
@@ -619,6 +650,11 @@ export default class CinciGrid {
      */
     setGlobalSearchPlaceholder(text) {
         this.globalSearchPlaceholder = text;
+        if (this.tableElement) {
+            const headerRight = this.selector.find(".table-header-right");
+            const globalSearch = headerRight.find(".global-search-input");
+            globalSearch.attr('placeholder', text);
+        }
         return this;
     }
 
@@ -1906,15 +1942,7 @@ export default class CinciGrid {
         }
 
         if (this.enableGlobalSearchBar) {
-            const searchInput = $(`<input type="text" class="form-control form-control-sm global-search-input" placeholder="${this.globalSearchPlaceholder}" style="width: 250px;">`);
-            searchInput.val(this.globalSearch);
-            searchInput.on("keydown", (e) => {
-                if (e.key === "Enter") {
-                    this.globalSearch = e.target.value.trim();
-                    this.index = 1;
-                    this.render();
-                }
-            });
+            const searchInput = this.#createGlobalSearchInput();
             headerContainer.find(".table-header-right").append(searchInput);
         }
 
@@ -1963,5 +1991,37 @@ export default class CinciGrid {
                 <div class="table-header-right d-flex align-items-center gap-2"></div>
             </div>
         `);
+    }
+
+    /**
+     * @private
+     * @method #createGlobalSearchInput
+     * @description Global arama (search) alanını oluşturur.  
+     * Bu metod, tablo başlığındaki `.table-header-right` alanına dinamik olarak eklenecek arama kutusunu hazırlar.
+     * Enter tuşuna basıldığında arama ifadesini kaydedip tabloyu yeniden render eder.
+     *
+     * @returns {jQuery} Oluşturulmuş arama input öğesini döner.
+     *
+     * @example
+     * const searchInput = this.#createGlobalSearchInput();
+     * $(".table-header-right").append(searchInput);
+     *
+     * @details
+     * - Placeholder metni `this.globalSearchPlaceholder` değerini kullanır.
+     * - Mevcut `this.globalSearch` değeri input içine önceden yazılır.
+     * - Arama işlemi yalnızca Enter tuşu ile tetiklenir.
+     * - Arama sonrası tablo ilk sayfadan yeniden yüklenir.
+     */
+    #createGlobalSearchInput() {
+        const searchInput = $(`<input type="text" class="form-control form-control-sm global-search-input" placeholder="${this.globalSearchPlaceholder}" style="width: 250px;">`);
+        searchInput.val(this.globalSearch);
+        searchInput.on("keydown", (e) => {
+            if (e.key === "Enter") {
+                this.globalSearch = e.target.value.trim();
+                this.index = 1;
+                this.render();
+            }
+        });
+        return searchInput;
     }
 }
