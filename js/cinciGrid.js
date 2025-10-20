@@ -416,7 +416,7 @@ export default class CinciGrid {
         if (typeof classes !== "string")
             throw new Error("CinciGrid: classes değeri geçerli bir string olmalı.");
         this.tableClasses = classes.trim();
-        if (this.tableElement) this.tableElement.removeClass().addClass(this.tableClasses);
+        if (this.tableElement) this.tableElement.removeClass().addClass("cinci-grid " + this.tableClasses);
         return this;
     }
 
@@ -476,6 +476,11 @@ export default class CinciGrid {
             throw new Error("CinciGrid: title değeri geçerli bir string olmalı.");
         this.tableTitle = title.trim();
         this.showTitle = true;
+        if (this.tableElement) {
+            const tableTitle = this.selector.find('.table-title');
+            console.log(tableTitle);
+            tableTitle.text(this.tableTitle);
+        }
         return this;
     }
 
@@ -1727,7 +1732,7 @@ export default class CinciGrid {
         this._currentViewData = pageData;
         this._currentViewIndices = pageData.map(row => this.data.indexOf(row)).filter(index => index !== -1);
         
-        const table = $(`<table id="${this.tableId || ''}" class="custom-table m-0 ${this.tableClasses || ''}"></table>`);
+        const table = $(`<table id="${this.tableId || ''}" class="cinci-grid ${this.tableClasses || ''}"></table>`);
         table.append(this.#buildHeader(this._currentViewIndices));
         table.append(this.#buildBody(pageData));
         const footer = this.#buildFooter();
@@ -1737,7 +1742,7 @@ export default class CinciGrid {
         const headerContainer = this.#buildHeaderContainer();
 
         if (this.showTitle && this.tableTitle) {
-            const titleEl = $(`<h5 class="mb-0 fw-bold">${this.tableTitle}</h5>`);
+            const titleEl = $(`<h5 class="table-title mb-0 fw-bold">${this.tableTitle}</h5>`);
             headerContainer.find(".table-header-left").append(titleEl);
         }
 
