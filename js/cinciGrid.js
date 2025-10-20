@@ -719,6 +719,81 @@ export default class CinciGrid {
     }
 
     /**
+     * @private
+     * @method #parseStyleString
+     * @description Inline CSS stil metnini anahtar/değer çiftleri bulunan bir nesneye dönüştürür.
+     *
+     * @param {string} style - Örn. "background-color: red; color: white".
+     * @returns {Object<string, string>} Stil özelliklerinin haritası.
+     */
+    #parseStyleString(style) {
+        if (typeof style !== "string" || !style.trim()) return {};
+
+        return style.split(";").map(rule => rule.trim()).filter(Boolean)
+            .reduce((acc, rule) => {
+                const [property, ...valueParts] = rule.split(":");
+                if (!property || valueParts.length === 0) return acc;
+                acc[property.trim()] = valueParts.join(":").trim();
+                return acc;
+            }, {});
+    }
+
+    /**
+     * @private
+     * @method #stringifyStyleObject
+     * @description Stil nesnesini inline CSS metnine dönüştürür.
+     *
+     * @param {Object<string, string>} styleObject - Stil özelliklerinin bulunduğu nesne.
+     * @returns {string} Inline CSS metni.
+     */
+    #stringifyStyleObject(styleObject) {
+        return Object.entries(styleObject).map(([property, value]) => `${property}: ${value}`).join("; ");
+    }
+
+    /**
+     * @private
+     * @method #extractStyleKeys
+     * @description Stil kaldırma işlemlerinde kullanılacak property isimlerini normalize eder.
+     *
+     * @param {string|string[]} properties - Kaldırılacak stil tanımı veya tanımları.
+     * @returns {string[]} Normalize edilmiş property isimleri.
+     */
+    #extractStyleKeys(properties) {
+        if (Array.isArray(properties)) {
+            return properties.map(item => this.#extractStyleKeys(item)).flat();
+        }
+
+        if (typeof properties === "string") {
+            const trimmed = properties.trim();
+            if (!trimmed) return [];
+
+            if (trimmed.includes(":")) {
+                return Object.keys(this.#parseStyleString(trimmed));
+            }
+
+            return trimmed.split(",").map(part => part.trim()).filter(Boolean);
+        }
+
+        return [];
+    }
+
+    /**
+     * @private
+     * @method #updateContainerStyle
+     * @description DOM üzerindeki container stilini günceller.
+     *
+     * @param {string} containerSelector - Güncellenecek container'ın seçicisi.
+     * @param {string} style - Uygulanacak inline CSS.
+     */
+    #updateContainerStyle(containerSelector, style) {
+        if (!this.tableElement) return;
+        const container = this.selector.find(containerSelector);
+        if (container.length) {
+            container.attr("style", style);
+        }
+    }
+
+    /**
      * @method setHeaderContainerStyle
      * @description Tablo başlığı (header) bölümüne özel inline CSS stilleri uygular.  
      * Bu metot, tablo başlığı ve kontrol alanlarının geliştirici tarafından özelleştirilmesini sağlar.
@@ -733,10 +808,48 @@ export default class CinciGrid {
         if (typeof style !== "string")
             throw new Error("CinciGrid: headerContainer style bir string olmalı.");
         this.headerContainerStyle = style.trim();
-        if (this.tableElement) {
-            const headerContainer = this.selector.find('.headerContainer');
-            headerContainer.attr('style', style.trim());
-        }
+        if (this.tableElement) this.#updateContainerStyle('.headerContainer', this.headerContainerStyle);
+        return this;
+    }
+
+     /**
+     * @method addHeaderContainerStyle
+     * @description Mevcut header stiline yeni CSS kuralları ekler veya var olanları günceller.
+     *
+     * @param {string} style - Eklenecek inline CSS metni.
+     * @returns {CinciGrid} Mevcut tablo örneği.
+     */
+    addHeaderContainerStyle(style) {
+        if (typeof style !== "string")
+            throw new Error("CinciGrid: headerContainer style bir string olmalı.");
+
+        const currentStyles = this.#parseStyleString(this.headerContainerStyle);
+        const newStyles = this.#parseStyleString(style);
+        const mergedStyles = { ...currentStyles, ...newStyles };
+
+        this.headerContainerStyle = this.#stringifyStyleObject(mergedStyles);
+        this.#updateContainerStyle('.headerContainer', this.headerContainerStyle);
+        return this;
+    }
+
+    /**
+     * @method removeHeaderContainerStyle
+     * @description Header stilinden belirtilen CSS özelliklerini kaldırır.
+     *
+     * @param {string|string[]} properties - Silinecek özellik isimleri veya inline CSS metni.
+     * @returns {CinciGrid} Mevcut tablo örneği.
+     */
+    removeHeaderContainerStyle(properties) {
+        const keys = this.#extractStyleKeys(properties);
+        if (!keys.length) return this;
+
+        const currentStyles = this.#parseStyleString(this.headerContainerStyle);
+        keys.forEach(key => {
+            if (key in currentStyles) delete currentStyles[key];
+        });
+
+        this.headerContainerStyle = this.#stringifyStyleObject(currentStyles);
+        this.#updateContainerStyle('.headerContainer', this.headerContainerStyle);
         return this;
     }
 
@@ -755,10 +868,48 @@ export default class CinciGrid {
         if (typeof style !== "string")
             throw new Error("CinciGrid: footerContainer style bir string olmalı.");
         this.footerContainerStyle = style.trim();
-        if (this.tableElement) {
-            const footerContainer = this.selector.find('.footer-container');
-            footerContainer.attr('style', style.trim());
-        }
+        if (this.tableElement) this.#updateContainerStyle('.footer-container', this.footerContainerStyle);
+        return this;
+    }
+
+    /**
+     * @method addFooterContainerStyle
+     * @description Mevcut footer stiline yeni CSS kuralları ekler veya var olanları günceller.
+     *
+     * @param {string} style - Eklenecek inline CSS metni.
+     * @returns {CinciGrid} Mevcut tablo örneği.
+     */
+    addFooterContainerStyle(style) {
+        if (typeof style !== "string")
+            throw new Error("CinciGrid: footerContainer style bir string olmalı.");
+
+        const currentStyles = this.#parseStyleString(this.footerContainerStyle);
+        const newStyles = this.#parseStyleString(style);
+        const mergedStyles = { ...currentStyles, ...newStyles };
+
+        this.footerContainerStyle = this.#stringifyStyleObject(mergedStyles);
+        this.#updateContainerStyle('.footer-container', this.footerContainerStyle);
+        return this;
+    }
+
+    /**
+     * @method removeFooterContainerStyle
+     * @description Footer stilinden belirtilen CSS özelliklerini kaldırır.
+     *
+     * @param {string|string[]} properties - Silinecek özellik isimleri veya inline CSS metni.
+     * @returns {CinciGrid} Mevcut tablo örneği.
+     */
+    removeFooterContainerStyle(properties) {
+        const keys = this.#extractStyleKeys(properties);
+        if (!keys.length) return this;
+
+        const currentStyles = this.#parseStyleString(this.footerContainerStyle);
+        keys.forEach(key => {
+            if (key in currentStyles) delete currentStyles[key];
+        });
+
+        this.footerContainerStyle = this.#stringifyStyleObject(currentStyles);
+        this.#updateContainerStyle('.footer-container', this.footerContainerStyle);
         return this;
     }
 

@@ -7,6 +7,8 @@ const btnChangeTableRemoveClass = $('#btn-change-table-remove-class');
 const btnChangeTableAddClass = $('#btn-change-table-add-class');
 const btnChangeTableTitle = $('#btn-change-table-title');
 const btnChangeTableHeaderContainerStyle = $('#btn-change-table-header-container-style');
+const btnChangeTableHeaderContainerStyleAdd = $('#btn-change-table-header-container-style-add');
+const btnChangeTableHeaderContainerStyleRemove = $('#btn-change-table-header-container-style-remove');
 const btnChangeTableFooterContainerStyle = $('#btn-change-table-footer-container-style');
 
 // Datas
@@ -45,6 +47,12 @@ $(document).ready(function() {
 
     // btn-change-table-footer-container-style button click event
     btnChangeTableFooterContainerStyle.on('click', () => userTableElement.setFooterContainerStyle("background-color: red;"));
+
+    // btn-change-table-header-container-style-add button click event
+    btnChangeTableHeaderContainerStyleAdd.on('click', () => userTableElement.addHeaderContainerStyle("color: red;"));
+
+    // btn-change-table-header-container-style-remove button click event
+    btnChangeTableHeaderContainerStyleRemove.on('click', () => userTableElement.removeHeaderContainerStyle("background-color: blue;"));
 
     // Cinci Grid
     const userTableElement = new CustomTable($('#userTableElement'));
