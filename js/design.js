@@ -6,6 +6,8 @@ const btnChangeTableClass = $('#btn-change-table-class');
 const btnChangeTableRemoveClass = $('#btn-change-table-remove-class');
 const btnChangeTableAddClass = $('#btn-change-table-add-class');
 const btnChangeTableTitle = $('#btn-change-table-title');
+const btnChangeTableHeaderContainerStyle = $('#btn-change-table-header-container-style');
+const btnChangeTableFooterContainerStyle = $('#btn-change-table-footer-container-style');
 
 // Datas
 let users = [
@@ -38,6 +40,13 @@ $(document).ready(function() {
     // btn-change-table-title button click event
     btnChangeTableTitle.on('click', () => userTableElement.setTitle("Tablo Başlığı Değiştirildi."));
 
+    // btn-change-table-header-container-style button click event
+    btnChangeTableHeaderContainerStyle.on('click', () => userTableElement.setHeaderContainerStyle("background-color: blue;"));
+
+    // btn-change-table-footer-container-style button click event
+    btnChangeTableFooterContainerStyle.on('click', () => userTableElement.setFooterContainerStyle("background-color: red;"));
+
+    // Cinci Grid
     const userTableElement = new CustomTable($('#userTableElement'));
     userTableElement.setData(users)
         .setPageSize(10)

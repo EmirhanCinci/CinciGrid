@@ -733,6 +733,10 @@ export default class CinciGrid {
         if (typeof style !== "string")
             throw new Error("CinciGrid: headerContainer style bir string olmalı.");
         this.headerContainerStyle = style.trim();
+        if (this.tableElement) {
+            const headerContainer = this.selector.find('.headerContainer');
+            headerContainer.attr('style', style.trim());
+        }
         return this;
     }
 
@@ -751,6 +755,10 @@ export default class CinciGrid {
         if (typeof style !== "string")
             throw new Error("CinciGrid: footerContainer style bir string olmalı.");
         this.footerContainerStyle = style.trim();
+        if (this.tableElement) {
+            const footerContainer = this.selector.find('.footer-container');
+            footerContainer.attr('style', style.trim());
+        }
         return this;
     }
 
