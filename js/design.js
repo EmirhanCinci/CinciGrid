@@ -15,6 +15,8 @@ const btnChangeTableFooterContainerStyleRemove = $('#btn-change-table-footer-con
 const btnChangeTableGlobalSearchClose = $('#btn-change-table-global-search-close');
 const btnChangeTableGlobalSearchOpen = $('#btn-change-table-global-search-open');
 const btnChangeTableGlobalSearchPlaceHoldder = $('#btn-change-table-global-search-placeholder');
+const btnChangeTableTotalCountInfoClose = $('#btn-change-table-total-count-info-close');
+const btnChangeTableTotalCountInfoOpen = $('#btn-change-table-total-count-info-open');
 
 // Datas
 let users = [
@@ -73,6 +75,10 @@ $(document).ready(function() {
 
     // btn-change-table-global-search-placeholder button event click
     btnChangeTableGlobalSearchPlaceHoldder.on('click', () => userTableElement.setGlobalSearchPlaceholder("Değiştirildi..."));
+
+    btnChangeTableTotalCountInfoClose.on('click', () => userTableElement.enableTotalCountInfoMode(false));
+
+    btnChangeTableTotalCountInfoOpen.on('click', () => userTableElement.enableTotalCountInfoMode(true));
 
     // Cinci Grid
     const userTableElement = new CustomTable($('#userTableElement'));

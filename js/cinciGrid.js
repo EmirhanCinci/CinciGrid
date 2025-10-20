@@ -993,6 +993,42 @@ export default class CinciGrid {
      */
     enableTotalCountInfoMode(enabled = true) {
         this.totalCountInfo = enabled;
+
+        if (!this.tableElement) return this;
+
+        const footerSelector = ".footer-container";
+        let footerContainer = this.selector.find(footerSelector);
+
+        if (enabled) {
+            if (!footerContainer.length) {
+                const newFooter = this.#buildFooterContainer();
+                if (newFooter) {
+                    this.selector.append(newFooter);
+                    this.paginationElement = newFooter;
+                    footerContainer = newFooter;
+                }
+            }
+
+            if (footerContainer && footerContainer.length) {
+                let infoDiv = footerContainer.find(".pagination-info");
+                if (!infoDiv.length) {
+                    infoDiv = $("<div class=\"pagination-info small text-muted\"></div>");
+                    footerContainer.prepend(infoDiv);
+                }
+                infoDiv.text(this.#builInfo()).removeClass("d-none");
+            }
+        } else if (footerContainer.length) {
+            const infoDiv = footerContainer.find(".pagination-info");
+            if (!infoDiv.length) return this;
+
+            if (this.usePagination) {
+                infoDiv.empty().addClass("d-none");
+            } else {
+                footerContainer.remove();
+                this.paginationElement = null;
+            }
+        }
+
         return this;
     }
 
@@ -1332,6 +1368,8 @@ export default class CinciGrid {
         if (this.totalCountInfo) {
             const infoText = this.#builInfo();
             infoDiv.text(infoText);
+        } else {
+            infoDiv.addClass("d-none");
         }
         footerContainer.append(infoDiv);
 
@@ -1941,12 +1979,7 @@ export default class CinciGrid {
             headerContainer.find(".table-header-left").append(titleEl);
         }
 
-        if (this.enableGlobalSearchBar) {
-            const searchInput = this.#createGlobalSearchInput();
-            headerContainer.find(".table-header-right").append(searchInput);
-        }
-
-        const resetBtn = $(`<button class="btn btn-sm btn-outline-secondary reset-table-btn" title="Filtreleri, aramaları ve sıralamayı sıfırla">⟳</button>`);
+        const resetBtn = $(`<button class="btn btn-sm btn-danger reset-table-btn" title="Tablodaki filtreleri, aramaları ve sıralamayı sıfırla">Tabloyu Sıfırla</button>`);
         const isDefaultState = !this.globalSearch && Object.keys(this.activeFilters).length === 0 && Object.keys(this.columnSearches).length === 0 && !this.sortKey && this.sortOrder === "asc" && this.index === 1;
         resetBtn.prop("disabled", isDefaultState);
         resetBtn.on("click", () => {
@@ -1960,6 +1993,11 @@ export default class CinciGrid {
         });
         headerContainer.find(".table-header-right").append(resetBtn);
 
+        if (this.enableGlobalSearchBar) {
+            const searchInput = this.#createGlobalSearchInput();
+            headerContainer.find(".table-header-right").append(searchInput);
+        }
+
         if (this.enableSelection && this.selectedRows.size > 0) {
             const info = $(`<span class="selectedRowInfo text-muted small">${this.selectedRows.size} satır seçili</span>`);
             headerContainer.find(".table-header-right").prepend(info);
@@ -1968,7 +2006,7 @@ export default class CinciGrid {
         this.selector.append(headerContainer);
         this.selector.append(table);
         this.tableElement = table;
-        if (this.usePagination && this.totalCount > 0) {
+        if (this.usePagination || this.totalCountInfo) {
             const footerContainer = this.#buildFooterContainer();
             if (footerContainer) {
                 this.selector.append(footerContainer);
