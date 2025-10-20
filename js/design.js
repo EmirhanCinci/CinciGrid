@@ -17,6 +17,10 @@ const btnChangeTableGlobalSearchOpen = $('#btn-change-table-global-search-open')
 const btnChangeTableGlobalSearchPlaceHoldder = $('#btn-change-table-global-search-placeholder');
 const btnChangeTableTotalCountInfoClose = $('#btn-change-table-total-count-info-close');
 const btnChangeTableTotalCountInfoOpen = $('#btn-change-table-total-count-info-open');
+const btnChangeTablePaginationClose = $('#btn-change-table-pagination-close');
+const btnChangeTablePaginationOpen = $('#btn-change-table-pagination-open');
+const btnChangeTableDataClear = $('#btn-change-table-data-clear');
+const btnChangeTableDataSet = $('#btn-change-table-data-set');
 
 // Datas
 let users = [
@@ -76,14 +80,28 @@ $(document).ready(function() {
     // btn-change-table-global-search-placeholder button event click
     btnChangeTableGlobalSearchPlaceHoldder.on('click', () => userTableElement.setGlobalSearchPlaceholder("Değiştirildi..."));
 
+    // btn-change-table-total-count-info-close button click event
     btnChangeTableTotalCountInfoClose.on('click', () => userTableElement.enableTotalCountInfoMode(false));
-
+    
+    // btn-change-table-total-count-info-open button click event
     btnChangeTableTotalCountInfoOpen.on('click', () => userTableElement.enableTotalCountInfoMode(true));
+
+    // btn-change-table-pagination-close button click event
+    btnChangeTablePaginationClose.on('click', () => userTableElement.enablePagination(false));
+
+    // btn-change-table-pagination-open button click event
+    btnChangeTablePaginationOpen.on('click', () => userTableElement.enablePagination(true));
+
+    // btn-change-table-data-clear button click event
+    btnChangeTableDataClear.on('click', () => userTableElement.clearData());
+
+    // btn-change-table-data-set button click event
+    btnChangeTableDataSet.on('click', () => userTableElement.setData(users));
 
     // Cinci Grid
     const userTableElement = new CustomTable($('#userTableElement'));
     userTableElement.setData(users)
-        .setPageSize(10)
+        .setPageSize(5)
         .setTableId("user-table")
         .setTableClass("table table-striped table-bordered table-hover")
         .setTitle("👷 Personel Listesi")

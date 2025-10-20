@@ -351,6 +351,22 @@ export default class CinciGrid {
     }
 
     /**
+     * @private
+     * @method #resetInteractiveState
+     * @description Filtreleme, arama ve sıralama ile ilgili tüm durumları varsayılan
+     * değerlere döndürür. Veri seti değişmeden veya temizlenmeden önce çağrılarak
+     * yeni veri ile çakışabilecek eski durumların temizlenmesini sağlar.
+     */
+    #resetInteractiveState() {
+        this.globalSearch = "";
+        this.columnSearches = {};
+        this.activeFilters = {};
+        this.sortKey = null;
+        this.sortOrder = "asc";
+        this.index = 1;
+    }
+
+    /**
      * Yeni veri kümesini tabloya atar.
      * 
      * @param {Array<Object>} data - Gösterilecek veri kümesi (her satır bir nesne olarak temsil edilir).
@@ -363,8 +379,10 @@ export default class CinciGrid {
      */
     setData(data) {
         if (!Array.isArray(data)) throw new Error("CinciGrid: Data bir dizi olmalı.");
+        this.#resetInteractiveState();
         this.data = data;
         this.#updateCount();
+        this.render();
         return this;
     }
 
@@ -378,8 +396,11 @@ export default class CinciGrid {
      * grid.clearData(); // Tüm tablo içeriğini temizler
      */
     clearData() {
+        this.#resetInteractiveState();
         this.data = [];
         this.#updateCount();
+        this.index = 1;
+        this.render();
         return this;
     }
 
@@ -510,6 +531,8 @@ export default class CinciGrid {
      */
     enablePagination(enabled = true) {
         this.usePagination = enabled;
+        this.index = 1;
+        this.render();
         return this;
     }
 
@@ -1983,12 +2006,7 @@ export default class CinciGrid {
         const isDefaultState = !this.globalSearch && Object.keys(this.activeFilters).length === 0 && Object.keys(this.columnSearches).length === 0 && !this.sortKey && this.sortOrder === "asc" && this.index === 1;
         resetBtn.prop("disabled", isDefaultState);
         resetBtn.on("click", () => {
-            this.globalSearch = "";
-            this.columnSearches = {};
-            this.activeFilters = {};
-            this.sortKey = null;
-            this.sortOrder = "asc";
-            this.index = 1;
+            this.#resetInteractiveState();
             this.render();
         });
         headerContainer.find(".table-header-right").append(resetBtn);
