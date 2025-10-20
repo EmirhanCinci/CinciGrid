@@ -21,6 +21,10 @@ const btnChangeTablePaginationClose = $('#btn-change-table-pagination-close');
 const btnChangeTablePaginationOpen = $('#btn-change-table-pagination-open');
 const btnChangeTableDataClear = $('#btn-change-table-data-clear');
 const btnChangeTableDataSet = $('#btn-change-table-data-set');
+const btnChangeTableCheckboxClose = $('#btn-change-table-checkbox-close');
+const btnChangeTableCheckboxOpen = $('#btn-change-table-checkbox-open');
+const btnChangeTableRowNumbersClose = $('#btn-change-table-row-numbers-close');
+const btnChangeTableRowNumbersOpen = $('#btn-change-table-row-numbers-open');
 
 // Datas
 let users = [
@@ -97,6 +101,18 @@ $(document).ready(function() {
 
     // btn-change-table-data-set button click event
     btnChangeTableDataSet.on('click', () => userTableElement.setData(users));
+
+    // btn-change-table-checkbox-close button click event
+    btnChangeTableCheckboxClose.on('click', () => userTableElement.enableRowSelection(false));
+
+    // btn-change-table-checkbox-open button click event
+    btnChangeTableCheckboxOpen.on('click', () => userTableElement.enableRowSelection(true));
+
+    // btn-change-table-row-numbers-close button click event
+    btnChangeTableRowNumbersClose.on('click', () => userTableElement.enableRowNumbers(false));
+
+    // btn-change-table-row-numbers-open button click event
+    btnChangeTableRowNumbersOpen.on('click', () => userTableElement.enableRowNumbers(true));
 
     // Cinci Grid
     const userTableElement = new CustomTable($('#userTableElement'));

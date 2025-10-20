@@ -499,7 +499,6 @@ export default class CinciGrid {
         this.showTitle = true;
         if (this.tableElement) {
             const tableTitle = this.selector.find('.table-title');
-            console.log(tableTitle);
             tableTitle.text(this.tableTitle);
         }
         return this;
@@ -580,7 +579,13 @@ export default class CinciGrid {
      * grid.enableRowNumbers(false); // Satır numaralarını gizle
      */
     enableRowNumbers(enabled = true) {
+        const previousState = this.showRowNumbers;
         this.showRowNumbers = enabled;
+
+        if (this.tableElement && previousState !== enabled) {
+            this.render();
+        }
+        
         return this;
     }
 
@@ -595,8 +600,17 @@ export default class CinciGrid {
      * grid.enableRowSelection(false); // Satır seçimi pasif ve tüm seçimler temizlenir
      */
     enableRowSelection(enabled = true) {
+        const previousState = this.enableSelection;
         this.enableSelection = enabled;
-        if (!enabled) this.selectedRows.clear();
+
+        if (!enabled && this.selectedRows.size > 0) {
+            this.selectedRows.clear();
+        }
+
+        if (this.tableElement && previousState !== enabled) {
+            this.render();
+        }
+
         return this;
     }
 
